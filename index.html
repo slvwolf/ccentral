@@ -45,6 +45,15 @@
 							</tr>
 						</tbody>
 					</table>
+					<legend>Info</legend>
+					<table class="table well">
+						<tbody>
+							<tr ng-repeat="(key, value) in info">
+								<th scope="row">{{key}}</th>
+								<td>{{value}}</td>
+							</tr>
+						</tbody>
+					</table>
 					<div ng-show="serviceData != null">
 						<form action="" method="POST" class="form" role="form">
 							<legend>Configuration</legend>

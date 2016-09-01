@@ -7,6 +7,7 @@ m.controller('MainCtrl', ['$scope', '$http',
         $scope.serviceData = null;
         $scope.services = [];
         $scope.instances = [];
+        $scope.info = [];
 
         $scope.loadServices = function() {
             $http.get('/api/1/services').then(function(v) {
@@ -19,12 +20,14 @@ m.controller('MainCtrl', ['$scope', '$http',
             $scope.selectedService = service;
             $scope.serviceData = null;
             $scope.instances = [];
+            $scope.info = [];
             $http.get('/api/1/services/' + service).then(function(v) {
                 console.log(v);
                 $scope.serviceData = {"v": {"title": "Version",
                                       "type": "string",
                                       "description": "Automatically incremented on each configuration change"}};
                 $scope.instances = v.data.clients;
+                $scope.info = v.data.info;
                 _.each(v.data.schema, function(v, k) {
                     $scope.serviceData[k] = v;
                     v.value = v.default;

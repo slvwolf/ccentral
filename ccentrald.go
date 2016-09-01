@@ -37,6 +37,7 @@ type Service struct {
 	Schema    map[string]SchemaItem   `json:"schema"`
 	Config    map[string]Item         `json:"config"`
 	Instances map[string]InstanceItem `json:"clients"`
+	Info      map[string]string       `json:"info"`
 }
 
 type InstanceItem struct {
@@ -44,10 +45,13 @@ type InstanceItem struct {
 	Timestamp float64 `json:"ts"`
 }
 
+type ServiceInfoItem struct {
+}
+
 var etcd client.KeysAPI
 
-func newService(schema map[string]SchemaItem, config map[string]Item, instances map[string]InstanceItem) *Service {
-	return &Service{Schema: schema, Config: config, Instances: instances}
+func newService(schema map[string]SchemaItem, config map[string]Item, instances map[string]InstanceItem, info map[string]string) *Service {
+	return &Service{Schema: schema, Config: config, Instances: instances, Info: info}
 }
 
 func writeInternalError(w http.ResponseWriter, msg string, status int) {
@@ -119,6 +123,28 @@ func getInstanceList(serviceId string) (map[string]InstanceItem, error) {
 		instances[last] = i
 	}
 	return instances, nil
+}
+
+func getServiceInfoList(serviceId string) (map[string]string, error) {
+	info := make(map[string]string)
+	resp, err := etcd.Get(context.Background(), "/ccentral/services/"+serviceId+"/info", nil)
+	if err != nil {
+		if strings.Contains(err.Error(), "Key not found") {
+			log.Printf("No service info found for service %v", serviceId)
+			return info, nil
+		}
+		log.Printf(err.Error())
+		return nil, err
+	}
+	for _, v := range resp.Node.Nodes {
+		keys := strings.Split(v.Key, "/")
+		last := keys[len(keys)-1:][0]
+		if err != nil {
+			log.Printf("Could not unmarshal following: %v", v.Value)
+		}
+		info[last] = v.Value
+	}
+	return info, nil
 }
 
 func getSchema(serviceId string) (map[string]SchemaItem, error) {
@@ -225,7 +251,13 @@ func handleService(w http.ResponseWriter, r *http.Request) {
 		writeInternalError(w, "Could not retrieve instances", http.StatusInternalServerError)
 		return
 	}
-	output, err := json.Marshal(newService(schema, config, instances))
+	info, err := getServiceInfoList(serviceId)
+	if err != nil {
+		log.Printf("Problem getting service info: %v", err)
+		writeInternalError(w, "Could not retrieve service info", http.StatusInternalServerError)
+		return
+	}
+	output, err := json.Marshal(newService(schema, config, instances, info))
 	if err != nil {
 		writeInternalError(w, "Could not convert to json", http.StatusInternalServerError)
 		return
