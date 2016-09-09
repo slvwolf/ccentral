@@ -34,10 +34,10 @@ type item struct {
 }
 
 type service struct {
-	Schema    map[string]schemaItem   `json:"schema"`
-	Config    map[string]item         `json:"config"`
-	Instances map[string]instanceItem `json:"clients"`
-	Info      map[string]string       `json:"info"`
+	Schema    map[string]schemaItem             `json:"schema"`
+	Config    map[string]item                   `json:"config"`
+	Instances map[string]map[string]interface{} `json:"clients"`
+	Info      map[string]string                 `json:"info"`
 }
 
 type instanceItem struct {
@@ -47,7 +47,7 @@ type instanceItem struct {
 
 var etcd client.KeysAPI
 
-func newService(schema map[string]schemaItem, config map[string]item, instances map[string]instanceItem, info map[string]string) *service {
+func newService(schema map[string]schemaItem, config map[string]item, instances map[string]map[string]interface{}, info map[string]string) *service {
 	return &service{Schema: schema, Config: config, Instances: instances, Info: info}
 }
 
@@ -95,12 +95,12 @@ func handleServiceList(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(v))
 }
 
-func getInstanceList(serviceId string) (map[string]instanceItem, error) {
-	instances := make(map[string]instanceItem)
-	resp, err := etcd.Get(context.Background(), "/ccentral/services/"+serviceId+"/clients", nil)
+func getInstanceList(serviceID string) (map[string]map[string]interface{}, error) {
+	instances := make(map[string]map[string]interface{})
+	resp, err := etcd.Get(context.Background(), "/ccentral/services/"+serviceID+"/clients", nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "Key not found") {
-			log.Printf("No instances found for service %v", serviceId)
+			log.Printf("No instances found for service %v", serviceID)
 			return instances, nil
 		}
 		log.Printf(err.Error())
@@ -108,14 +108,13 @@ func getInstanceList(serviceId string) (map[string]instanceItem, error) {
 	}
 
 	for _, v := range resp.Node.Nodes {
-		i := instanceItem{}
+		i := make(map[string]interface{})
 		keys := strings.Split(v.Key, "/")
 		last := keys[len(keys)-1:][0]
 		err = json.Unmarshal([]byte(v.Value), &i)
+
 		if err != nil {
 			log.Printf("Could not unmarshal following: %v", v.Value)
-			i.Version = "problem"
-			i.Timestamp = 0
 		}
 		instances[last] = i
 	}
@@ -231,24 +230,24 @@ func incrementVersion(config map[string]item) {
 func handleService(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	setHeaders(w)
-	serviceId := vars["serviceId"]
-	schema, err := getSchema(serviceId)
+	serviceID := vars["serviceId"]
+	schema, err := getSchema(serviceID)
 	if err != nil {
 		writeInternalError(w, "Could not retrieve service schema", http.StatusInternalServerError)
 		return
 	}
-	config, err := getConfig(serviceId)
+	config, err := getConfig(serviceID)
 	if err != nil {
 		writeInternalError(w, "Could not retrieve config", http.StatusInternalServerError)
 		return
 	}
-	instances, err := getInstanceList(serviceId)
+	instances, err := getInstanceList(serviceID)
 	if err != nil {
 		log.Printf("Problem getting instances: %v", err)
 		writeInternalError(w, "Could not retrieve instances", http.StatusInternalServerError)
 		return
 	}
-	info, err := getServiceInfoList(serviceId)
+	info, err := getServiceInfoList(serviceID)
 	if err != nil {
 		log.Printf("Problem getting service info: %v", err)
 		writeInternalError(w, "Could not retrieve service info", http.StatusInternalServerError)
