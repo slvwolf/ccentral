@@ -17,41 +17,38 @@ import (
 	"golang.org/x/net/context"
 )
 
-type ServiceList struct {
+type serviceList struct {
 	Services []string `json:"services"`
 }
 
-type SchemaItem struct {
+type schemaItem struct {
 	Default     string `json:"default"`
 	Type        string `json:"type"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 }
 
-type Item struct {
+type item struct {
 	Value   string `json:"value"`
 	Changed int64  `json:"changed"`
 }
 
-type Service struct {
-	Schema    map[string]SchemaItem   `json:"schema"`
-	Config    map[string]Item         `json:"config"`
-	Instances map[string]InstanceItem `json:"clients"`
+type service struct {
+	Schema    map[string]schemaItem   `json:"schema"`
+	Config    map[string]item         `json:"config"`
+	Instances map[string]instanceItem `json:"clients"`
 	Info      map[string]string       `json:"info"`
 }
 
-type InstanceItem struct {
+type instanceItem struct {
 	Version   string  `json:"v"`
 	Timestamp float64 `json:"ts"`
 }
 
-type ServiceInfoItem struct {
-}
-
 var etcd client.KeysAPI
 
-func newService(schema map[string]SchemaItem, config map[string]Item, instances map[string]InstanceItem, info map[string]string) *Service {
-	return &Service{Schema: schema, Config: config, Instances: instances, Info: info}
+func newService(schema map[string]schemaItem, config map[string]item, instances map[string]instanceItem, info map[string]string) *service {
+	return &service{Schema: schema, Config: config, Instances: instances, Info: info}
 }
 
 func writeInternalError(w http.ResponseWriter, msg string, status int) {
@@ -82,7 +79,7 @@ func handleServiceList(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "{\"error\": \"Could not retrieve configuration\"}")
 		return
 	}
-	response := ServiceList{Services: make([]string, 0, resp.Node.Nodes.Len())}
+	response := serviceList{Services: make([]string, 0, resp.Node.Nodes.Len())}
 	for _, v := range resp.Node.Nodes {
 		keys := strings.Split(v.Key, "/")
 		last := keys[len(keys)-1:][0]
@@ -98,8 +95,8 @@ func handleServiceList(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(v))
 }
 
-func getInstanceList(serviceId string) (map[string]InstanceItem, error) {
-	instances := make(map[string]InstanceItem)
+func getInstanceList(serviceId string) (map[string]instanceItem, error) {
+	instances := make(map[string]instanceItem)
 	resp, err := etcd.Get(context.Background(), "/ccentral/services/"+serviceId+"/clients", nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "Key not found") {
@@ -111,7 +108,7 @@ func getInstanceList(serviceId string) (map[string]InstanceItem, error) {
 	}
 
 	for _, v := range resp.Node.Nodes {
-		i := InstanceItem{}
+		i := instanceItem{}
 		keys := strings.Split(v.Key, "/")
 		last := keys[len(keys)-1:][0]
 		err = json.Unmarshal([]byte(v.Value), &i)
@@ -125,12 +122,12 @@ func getInstanceList(serviceId string) (map[string]InstanceItem, error) {
 	return instances, nil
 }
 
-func getServiceInfoList(serviceId string) (map[string]string, error) {
+func getServiceInfoList(serviceID string) (map[string]string, error) {
 	info := make(map[string]string)
-	resp, err := etcd.Get(context.Background(), "/ccentral/services/"+serviceId+"/info", nil)
+	resp, err := etcd.Get(context.Background(), "/ccentral/services/"+serviceID+"/info", nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "Key not found") {
-			log.Printf("No service info found for service %v", serviceId)
+			log.Printf("No service info found for service %v", serviceID)
 			return info, nil
 		}
 		log.Printf(err.Error())
@@ -147,29 +144,29 @@ func getServiceInfoList(serviceId string) (map[string]string, error) {
 	return info, nil
 }
 
-func getSchema(serviceId string) (map[string]SchemaItem, error) {
-	resp, err := etcd.Get(context.Background(), "/ccentral/services/"+serviceId+"/schema", nil)
+func getSchema(serviceID string) (map[string]schemaItem, error) {
+	resp, err := etcd.Get(context.Background(), "/ccentral/services/"+serviceID+"/schema", nil)
 	if err != nil {
 		return nil, err
 	}
-	v := make(map[string]SchemaItem)
+	v := make(map[string]schemaItem)
 	json.Unmarshal([]byte(resp.Node.Value), &v)
 	return v, nil
 }
 
-func getConfig(serviceId string) (map[string]Item, error) {
-	resp, err := etcd.Get(context.Background(), "/ccentral/services/"+serviceId+"/config", nil)
+func getConfig(serviceID string) (map[string]item, error) {
+	resp, err := etcd.Get(context.Background(), "/ccentral/services/"+serviceID+"/config", nil)
 	if err != nil {
 		// Most likely new service that has only schema setup, just ignore the missing configuration
 		if strings.Contains(err.Error(), "100: Key not found") {
-			v := make(map[string]Item)
+			v := make(map[string]item)
 			return v, nil
 		} else {
 			log.Printf("Configuration could not be loaded, %v", err)
 			return nil, err
 		}
 	}
-	v := make(map[string]Item)
+	v := make(map[string]item)
 	json.Unmarshal([]byte(resp.Node.Value), &v)
 	return v, nil
 }
@@ -177,14 +174,14 @@ func getConfig(serviceId string) (map[string]Item, error) {
 func handleItem(w http.ResponseWriter, r *http.Request) {
 	setHeaders(w)
 	vars := mux.Vars(r)
-	serviceId := vars["serviceId"]
-	keyId := vars["keyId"]
+	serviceID := vars["serviceId"]
+	keyID := vars["keyId"]
 	if r.Method != http.MethodPut {
 		writeInternalError(w, "Allowed methods are: PUT", http.StatusBadRequest)
 		return
 	}
 
-	config, err := getConfig(serviceId)
+	config, err := getConfig(serviceID)
 	if err != nil {
 		writeInternalError(w, "Could not retrieve service configuration", http.StatusInternalServerError)
 		return
@@ -195,10 +192,10 @@ func handleItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	i := Item{}
+	i := item{}
 	i.Value = string(data)
 	i.Changed = time.Now().Unix()
-	config[keyId] = i
+	config[keyID] = i
 
 	incrementVersion(config)
 
@@ -208,19 +205,19 @@ func handleItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Configuration updated: [%v] %v=%v (version: %v)", string(serviceId), string(keyId), string(data), config["v"].Value)
+	log.Printf("Configuration updated: [%v] %v=%v (version: %v)", string(serviceID), string(keyID), string(data), config["v"].Value)
 
-	_, err = etcd.Set(context.Background(), "/ccentral/services/"+serviceId+"/config", string(output), nil)
+	_, err = etcd.Set(context.Background(), "/ccentral/services/"+serviceID+"/config", string(output), nil)
 	if err != nil {
 		writeInternalError(w, "Could not update configuration", http.StatusInternalServerError)
 		return
 	}
 }
 
-func incrementVersion(config map[string]Item) {
+func incrementVersion(config map[string]item) {
 	version, ok := config["v"]
 	if !ok {
-		version = Item{}
+		version = item{}
 	}
 	value, err := strconv.Atoi(version.Value)
 	if err != nil {
