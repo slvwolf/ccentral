@@ -281,8 +281,8 @@ func handleCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	etcdHost := flag.String("etcd", os.Getenv("etcd"), "etcd locations and port (Default: http://127.0.0.1:2379)")
-	port := flag.String("port", os.Getenv("port"), "Port to listen (Default: 3000)")
+	etcdHost := flag.String("etcd", os.Getenv("ETCD"), "etcd locations and port (Default: http://127.0.0.1:2379)")
+	port := flag.String("port", os.Getenv("PORT"), "Port to listen (Default: 3000)")
 	flag.Parse()
 	if *etcdHost == "" {
 		*etcdHost = "http://127.0.0.1:2379"
