@@ -33,7 +33,7 @@ m.controller('MainCtrl', ['$scope', '$http',
                     _.each(serviceData, function(value, key) {
                         nkey = key;
                         if (key.startsWith("c_")) {
-                            nkey = key.substr(2)
+                            nkey = key.substr(2) + " 1/min"
                         }
                         $scope.instanceHeaders[key] = nkey;
                     });
@@ -56,9 +56,9 @@ m.controller('MainCtrl', ['$scope', '$http',
             });
         };
 
-        $scope.representValue = function(value) {
-            if (typeof value === 'object') {
-                return value[0];
+        $scope.representValue = function(key, value) {
+            if (key.startsWith("c_")) {
+                return value[value.length-1];
             }
             return value;
         }

@@ -41,7 +41,7 @@
 						<tbody>
 							<tr ng-repeat="(key, value) in instances">
 								<th scope="row">{{key}}</th>
-								<th ng-repeat="(k, v) in instanceHeaders">{{representValue(value[k])}}</th>
+								<th ng-repeat="(k, v) in instanceHeaders">{{representValue(k, value[k])}}</th>
 							</tr>
 						</tbody>
 					</table>
