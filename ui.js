@@ -7,6 +7,7 @@ m.controller('MainCtrl', ['$scope', '$http',
         $scope.serviceData = null;
         $scope.services = [];
         $scope.instances = [];
+        $scope.instanceHeaders = {};
         $scope.info = [];
 
         $scope.loadServices = function() {
@@ -20,13 +21,24 @@ m.controller('MainCtrl', ['$scope', '$http',
             $scope.selectedService = service;
             $scope.serviceData = null;
             $scope.instances = [];
+            $scope.instanceHeaders = {};
             $scope.info = [];
             $http.get('/api/1/services/' + service).then(function(v) {
-                console.log(v);
                 $scope.serviceData = {"v": {"title": "Version",
                                       "type": "string",
                                       "description": "Automatically incremented on each configuration change"}};
                 $scope.instances = v.data.clients;
+                console.log($scope.instances)
+                _.each($scope.instances, function(serviceData, serviceId) {
+                    _.each(serviceData, function(value, key) {
+                        nkey = key;
+                        if (key.startsWith("c_")) {
+                            nkey = key.substr(2)
+                        }
+                        $scope.instanceHeaders[key] = nkey;
+                    });
+                });
+                console.log($scope.instanceHeaders);
                 $scope.info = v.data.info;
                 _.each(v.data.schema, function(v, k) {
                     $scope.serviceData[k] = v;
@@ -43,6 +55,13 @@ m.controller('MainCtrl', ['$scope', '$http',
                 });
             });
         };
+
+        $scope.representValue = function(value) {
+            if (typeof value === 'object') {
+                return value[0];
+            }
+            return value;
+        }
 
         $scope.saveField = function(key) {
             data = $scope.serviceData[key].value;

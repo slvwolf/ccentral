@@ -35,13 +35,13 @@
 						<thead>
 							<tr>
 								<th>Id</th>
-								<th>Version</th>
+								<th ng-repeat="(k, v) in instanceHeaders">{{v}}</th>
 							</tr>
 						</thead>
 						<tbody>
 							<tr ng-repeat="(key, value) in instances">
 								<th scope="row">{{key}}</th>
-								<td><span class="label label-success">{{value.v}}</span></td>
+								<th ng-repeat="(k, v) in instanceHeaders">{{representValue(value[k])}}</th>
 							</tr>
 						</tbody>
 					</table>
