@@ -1,5 +1,5 @@
 GO ?= go
-GOPATH := ${PWD}:$(GOPATH)
+GOPATH := ${PWD}/vendor:$(GOPATH)
 export GOPATH
 
 all: test build
