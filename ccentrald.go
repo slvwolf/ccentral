@@ -8,46 +8,19 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
-	"strings"
-	"time"
 
-	"github.com/coreos/etcd/client"
 	"github.com/gorilla/mux"
-	"golang.org/x/net/context"
 )
 
-type serviceList struct {
-	Services []string `json:"services"`
-}
-
-type schemaItem struct {
-	Default     string `json:"default"`
-	Type        string `json:"type"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-}
-
-type item struct {
-	Value   string `json:"value"`
-	Changed int64  `json:"changed"`
-}
-
+// Service is a container for all service data
 type service struct {
-	Schema    map[string]schemaItem             `json:"schema"`
-	Config    map[string]item                   `json:"config"`
+	Schema    map[string]SchemaItem             `json:"schema"`
+	Config    map[string]ConfigItem             `json:"config"`
 	Instances map[string]map[string]interface{} `json:"clients"`
 	Info      map[string]string                 `json:"info"`
 }
 
-type instanceItem struct {
-	Version   string  `json:"v"`
-	Timestamp float64 `json:"ts"`
-}
-
-var etcd client.KeysAPI
-
-func newService(schema map[string]schemaItem, config map[string]item, instances map[string]map[string]interface{}, info map[string]string) *service {
+func newService(schema map[string]SchemaItem, config map[string]ConfigItem, instances map[string]map[string]interface{}, info map[string]string) *service {
 	return &service{Schema: schema, Config: config, Instances: instances, Info: info}
 }
 
@@ -72,20 +45,13 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 
 func handleServiceList(w http.ResponseWriter, r *http.Request) {
 	setHeaders(w)
-	resp, err := etcd.Get(context.Background(), "/ccentral/services/", nil)
+	serviceList, err := GetServiceList()
 	if err != nil {
-		log.Printf(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "{\"error\": \"Could not retrieve configuration\"}")
 		return
 	}
-	response := serviceList{Services: make([]string, 0, resp.Node.Nodes.Len())}
-	for _, v := range resp.Node.Nodes {
-		keys := strings.Split(v.Key, "/")
-		last := keys[len(keys)-1:][0]
-		response.Services = append(response.Services, last)
-	}
-	v, err := json.Marshal(response)
+	v, err := json.Marshal(serviceList)
 	if err != nil {
 		log.Printf(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -93,81 +59,6 @@ func handleServiceList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprintf(w, string(v))
-}
-
-func getInstanceList(serviceID string) (map[string]map[string]interface{}, error) {
-	instances := make(map[string]map[string]interface{})
-	resp, err := etcd.Get(context.Background(), "/ccentral/services/"+serviceID+"/clients", nil)
-	if err != nil {
-		if strings.Contains(err.Error(), "Key not found") {
-			log.Printf("No instances found for service %v", serviceID)
-			return instances, nil
-		}
-		log.Printf(err.Error())
-		return nil, err
-	}
-
-	for _, v := range resp.Node.Nodes {
-		i := make(map[string]interface{})
-		keys := strings.Split(v.Key, "/")
-		last := keys[len(keys)-1:][0]
-		err = json.Unmarshal([]byte(v.Value), &i)
-
-		if err != nil {
-			log.Printf("Could not unmarshal following: %v", v.Value)
-		}
-		instances[last] = i
-	}
-	return instances, nil
-}
-
-func getServiceInfoList(serviceID string) (map[string]string, error) {
-	info := make(map[string]string)
-	resp, err := etcd.Get(context.Background(), "/ccentral/services/"+serviceID+"/info", nil)
-	if err != nil {
-		if strings.Contains(err.Error(), "Key not found") {
-			log.Printf("No service info found for service %v", serviceID)
-			return info, nil
-		}
-		log.Printf(err.Error())
-		return nil, err
-	}
-	for _, v := range resp.Node.Nodes {
-		keys := strings.Split(v.Key, "/")
-		last := keys[len(keys)-1:][0]
-		if err != nil {
-			log.Printf("Could not unmarshal following: %v", v.Value)
-		}
-		info[last] = v.Value
-	}
-	return info, nil
-}
-
-func getSchema(serviceID string) (map[string]schemaItem, error) {
-	resp, err := etcd.Get(context.Background(), "/ccentral/services/"+serviceID+"/schema", nil)
-	if err != nil {
-		return nil, err
-	}
-	v := make(map[string]schemaItem)
-	json.Unmarshal([]byte(resp.Node.Value), &v)
-	return v, nil
-}
-
-func getConfig(serviceID string) (map[string]item, error) {
-	resp, err := etcd.Get(context.Background(), "/ccentral/services/"+serviceID+"/config", nil)
-	if err != nil {
-		// Most likely new service that has only schema setup, just ignore the missing configuration
-		if strings.Contains(err.Error(), "100: Key not found") {
-			v := make(map[string]item)
-			return v, nil
-		} else {
-			log.Printf("Configuration could not be loaded, %v", err)
-			return nil, err
-		}
-	}
-	v := make(map[string]item)
-	json.Unmarshal([]byte(resp.Node.Value), &v)
-	return v, nil
 }
 
 func handleItem(w http.ResponseWriter, r *http.Request) {
@@ -180,74 +71,43 @@ func handleItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	config, err := getConfig(serviceID)
-	if err != nil {
-		writeInternalError(w, "Could not retrieve service configuration", http.StatusInternalServerError)
-		return
-	}
-	data, err := ioutil.ReadAll(r.Body)
+	value, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		writeInternalError(w, "Could not read body", http.StatusInternalServerError)
 		return
 	}
 
-	i := item{}
-	i.Value = string(data)
-	i.Changed = time.Now().Unix()
-	config[keyID] = i
+	version, err := SetConfigItem(string(serviceID), string(keyID), string(value))
 
-	incrementVersion(config)
-
-	output, err := json.Marshal(config)
 	if err != nil {
-		writeInternalError(w, "Could not convert to json", http.StatusInternalServerError)
+		writeInternalError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("Configuration updated: [%v] %v=%v (version: %v)", string(serviceID), string(keyID), string(data), config["v"].Value)
-
-	_, err = etcd.Set(context.Background(), "/ccentral/services/"+serviceID+"/config", string(output), nil)
-	if err != nil {
-		writeInternalError(w, "Could not update configuration", http.StatusInternalServerError)
-		return
-	}
-}
-
-func incrementVersion(config map[string]item) {
-	version, ok := config["v"]
-	if !ok {
-		version = item{}
-	}
-	value, err := strconv.Atoi(version.Value)
-	if err != nil {
-		value = 1
-	}
-	version.Value = strconv.Itoa(value + 1)
-	version.Changed = time.Now().Unix()
-	config["v"] = version
+	log.Printf("Configuration updated: [%v] %v=%v (version: %v)", string(serviceID), string(keyID), string(value), version)
 }
 
 func handleService(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	setHeaders(w)
 	serviceID := vars["serviceId"]
-	schema, err := getSchema(serviceID)
+	schema, err := GetSchema(serviceID)
 	if err != nil {
 		writeInternalError(w, "Could not retrieve service schema", http.StatusInternalServerError)
 		return
 	}
-	config, err := getConfig(serviceID)
+	config, err := GetConfig(serviceID)
 	if err != nil {
 		writeInternalError(w, "Could not retrieve config", http.StatusInternalServerError)
 		return
 	}
-	instances, err := getInstanceList(serviceID)
+	instances, err := GetInstanceList(serviceID)
 	if err != nil {
 		log.Printf("Problem getting instances: %v", err)
 		writeInternalError(w, "Could not retrieve instances", http.StatusInternalServerError)
 		return
 	}
-	info, err := getServiceInfoList(serviceID)
+	info, err := GetServiceInfoList(serviceID)
 	if err != nil {
 		log.Printf("Problem getting service info: %v", err)
 		writeInternalError(w, "Could not retrieve service info", http.StatusInternalServerError)
@@ -259,17 +119,6 @@ func handleService(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprintf(w, string(output))
-}
-
-func initEtcd(etcdHost string) {
-	var err error
-	log.Printf("Connecting to %s", etcdHost)
-	cfg := client.Config{Endpoints: []string{etcdHost}}
-	e, err := client.New(cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-	etcd = client.NewKeysAPI(e)
 }
 
 func handleCheck(w http.ResponseWriter, r *http.Request) {
@@ -296,13 +145,20 @@ _________ _________                __                .__
         \/        \/     \/     \/                 \/      `)
 
 	router := mux.NewRouter().StrictSlash(true)
-	initEtcd(*etcdHost)
+	InitCCentral(*etcdHost)
+	service := InitCCentralService("ccentral")
+	service.AddSchema("zabbix_enabled", "false", "string", "Zabbix Enabled", "Boolean for enabling or disabling Zabbix monitoring for all services")
+	service.AddSchema("zabbix_host", "localhost", "string", "Zabbix host", "Hostname for Zabbix")
+	service.AddSchema("zabbix_port", "10051", "string", "Zabbix host", "Port for Zabbix")
+	service.AddSchema("zabbix_interval", "60", "string", "Zabbix host", "Update interval for Zabbix metrics")
 	router.HandleFunc("/", handleRoot)
 	router.HandleFunc("/check", handleCheck)
 	router.HandleFunc("/{path}", handleRoot)
 	router.HandleFunc("/api/1/services", handleServiceList)
 	router.HandleFunc("/api/1/services/{serviceId}", handleService)
 	router.HandleFunc("/api/1/services/{serviceId}/keys/{keyId}", handleItem)
+	startZabbixUpdater(service)
+	log.Printf("Admin UI available at :" + *port)
 	err := http.ListenAndServe(":"+*port, router)
 	if err != nil {
 		log.Fatal(err)
