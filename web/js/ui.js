@@ -61,16 +61,19 @@ m.controller('MainCtrl', ['$scope', '$http',
                         }
                         if (key === "ts") {
                             if (value < (new Date).getTime() / 1000 - 60) {
-                                $scope.instanceTags[serviceId].push({"text": "Expired Timestamp", "type": "warning"});
+                                $scope.instanceTags[serviceId].push({"text": "Expired timestamp", "type": "warning"});
                             }
                         } else if (key === "v") {
-                            if (value != $scope.serviceData["config"]) {
-                                $scope.instanceTags[serviceId].push({"text": "Version mismatch", "type": "danger"});
+                            if (value != $scope.serviceData["v"].value) {
+                                $scope.instanceTags[serviceId].push({"text": "Old version ( v." + value + " )", "type": "danger"});
                             }
                         } else {
                             $scope.instanceHeaders[key] = nkey;
                         }
                     });
+                    if ($scope.instanceTags[serviceId].length === 0) {
+                        $scope.instanceTags[serviceId].push({"text": "Ok", "type": "success"});
+                    }
                 });
             });
         };
