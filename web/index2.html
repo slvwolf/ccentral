@@ -87,7 +87,7 @@
         </section>
         <section class="content-header" ng-show="selectedService.length === 0">
           <h1>
-          Dasgboard
+          Dashboard
           <small>Coming soon</small>
           </h1>
         </section>
@@ -124,12 +124,14 @@
                   <tr>
                     <th>Id</th>
                     <th ng-repeat="(k, v) in instanceHeaders">{{v}}</th>
+                    <th>Notes</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr ng-repeat="(key, value) in instances">
-                    <th scope="row">{{key}}</th>
+                    <th scope="row">{{$index + 1}}</th>
                     <th ng-repeat="(k, v) in instanceHeaders">{{representValue(k, value[k])}}</th>
+                    <th><span class="pull-left-container"><small ng-repeat="tag in instanceTags[key]" class="label label-{{tag.type}} pull-left">{{tag.text}}</small></span></th>
                   </tr>
                 </tbody>
               </table>

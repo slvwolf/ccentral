@@ -22,23 +22,17 @@ m.controller('MainCtrl', ['$scope', '$http',
             $scope.serviceData = null;
             $scope.instances = [];
             $scope.instanceHeaders = {};
+            $scope.instanceTags = {};
             $scope.info = [];
             $http.get('/api/1/services/' + service).then(function(v) {
-                $scope.serviceData = {"v": {"title": "Version",
-                                      "type": "string",
-                                      "description": "Automatically incremented on each configuration change"}};
-                $scope.instances = v.data.clients;
-                console.log($scope.instances)
-                _.each($scope.instances, function(serviceData, serviceId) {
-                    _.each(serviceData, function(value, key) {
-                        nkey = key;
-                        if (key.startsWith("c_")) {
-                            nkey = key.substr(2) + " 1/min"
-                        }
-                        $scope.instanceHeaders[key] = nkey;
-                    });
-                });
-                console.log($scope.instanceHeaders);
+                $scope.serviceData = {
+                    "v": {
+                        "title": "Version",
+                        "type": "string",
+                        "description": "Automatically incremented on each configuration change"
+                    }
+                };
+
                 $scope.info = v.data.info;
                 _.each(v.data.schema, function(v, k) {
                     $scope.serviceData[k] = v;
@@ -47,11 +41,36 @@ m.controller('MainCtrl', ['$scope', '$http',
                 });
                 _.each(v.data.config, function(v, k) {
                     if ($scope.serviceData[k] === undefined) {
-                        $scope.serviceData[k] = {value_orig: v.value, value: v.value};
+                        $scope.serviceData[k] = {
+                            value_orig: v.value,
+                            value: v.value
+                        };
                     } else {
                         $scope.serviceData[k].value_orig = v.value;
                         $scope.serviceData[k].value = v.value;
                     }
+                });
+                $scope.instances = v.data.clients;
+
+                _.each($scope.instances, function(serviceData, serviceId) {
+                    $scope.instanceTags[serviceId] = [];
+                    _.each(serviceData, function(value, key) {
+                        nkey = key;
+                        if (key.startsWith("c_")) {
+                            nkey = key.substr(2) + " 1/min";
+                        }
+                        if (key === "ts") {
+                            if (value < (new Date).getTime() / 1000 - 60) {
+                                $scope.instanceTags[serviceId].push({"text": "Expired Timestamp", "type": "warning"});
+                            }
+                        } else if (key === "v") {
+                            if (value != $scope.serviceData["config"]) {
+                                $scope.instanceTags[serviceId].push({"text": "Version mismatch", "type": "danger"});
+                            }
+                        } else {
+                            $scope.instanceHeaders[key] = nkey;
+                        }
+                    });
                 });
             });
         };
@@ -60,8 +79,8 @@ m.controller('MainCtrl', ['$scope', '$http',
             if (key.startsWith("c_")) {
                 if (value === undefined || value.length === 0) {
                     return "N/A";
-                } 
-                return value[value.length-1];
+                }
+                return value[value.length - 1];
             }
             return value;
         }
@@ -70,7 +89,7 @@ m.controller('MainCtrl', ['$scope', '$http',
             data = $scope.serviceData[key].value;
             console.log("Saving " + key + " = " + data);
             $http.put('/api/1/services/' + $scope.selectedService + "/keys/" + key, data).then(function(v) {
-                $scope.serviceData[key].value_orig =$scope.serviceData[key].value;
+                $scope.serviceData[key].value_orig = $scope.serviceData[key].value;
             });
         };
 
