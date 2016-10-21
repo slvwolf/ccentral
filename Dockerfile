@@ -1,7 +1,7 @@
 FROM scratch
 
 ADD ./ccentral /ccentral
-ADD ./web /web
+COPY web/ /web/
 
 EXPOSE 3000
 
