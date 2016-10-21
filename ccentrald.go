@@ -36,11 +36,21 @@ func setHeaders(w http.ResponseWriter) {
 func handleRoot(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	path := vars["path"]
+	res := vars["res"]
 	if path == "" || path == "/" {
-		path = "index.html"
+		res = "index2.html"
+		path = ""
 	}
+	if path == "js" {
+		w.Header().Add("Content-Type", "application/javascript; charset=utf-8")
+	}
+	if path == "css" {
+		w.Header().Add("Content-Type", "text/css")
+	}
+	w.WriteHeader(200)
+	path = "web/" + path + "/" + res
 	body, _ := ioutil.ReadFile(path)
-	fmt.Fprintf(w, string(body))
+	w.Write(body)
 }
 
 func handleServiceList(w http.ResponseWriter, r *http.Request) {
@@ -151,9 +161,9 @@ _________ _________                __                .__
 	service.AddSchema("zabbix_host", "localhost", "string", "Zabbix Hostname", "Hostname for Zabbix")
 	service.AddSchema("zabbix_port", "10051", "string", "Zabbix Hostname", "Port for Zabbix")
 	service.AddSchema("zabbix_interval", "60", "string", "Zabbix Interval", "Update interval for Zabbix metrics")
-	router.HandleFunc("/", handleRoot)
+	router.HandleFunc("/{res}", handleRoot)
 	router.HandleFunc("/check", handleCheck)
-	router.HandleFunc("/{path}", handleRoot)
+	router.HandleFunc("/{path}/{res}", handleRoot)
 	router.HandleFunc("/api/1/services", handleServiceList)
 	router.HandleFunc("/api/1/services/{serviceId}", handleService)
 	router.HandleFunc("/api/1/services/{serviceId}/keys/{keyId}", handleItem)

@@ -24,6 +24,12 @@ Parameters also work from environvent variables (`ETCD`, `PORT`)
 
 `Everything below is still WiP`
 
+### Library
+
+All libraries should implement:
+
+
+
 ### Etcd Keys
 
 #### /ccentral/services/`SERVICE_ID`/schema

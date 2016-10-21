@@ -58,6 +58,9 @@ m.controller('MainCtrl', ['$scope', '$http',
 
         $scope.representValue = function(key, value) {
             if (key.startsWith("c_")) {
+                if (value === undefined || value.length === 0) {
+                    return "N/A";
+                } 
                 return value[value.length-1];
             }
             return value;
