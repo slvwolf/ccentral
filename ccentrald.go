@@ -161,6 +161,7 @@ _________ _________                __                .__
 	service.AddSchema("zabbix_host", "localhost", "string", "Zabbix Hostname", "Hostname for Zabbix")
 	service.AddSchema("zabbix_port", "10051", "string", "Zabbix Hostname", "Port for Zabbix")
 	service.AddSchema("zabbix_interval", "60", "string", "Zabbix Interval", "Update interval for Zabbix metrics")
+	router.HandleFunc("/", handleRoot)
 	router.HandleFunc("/{res}", handleRoot)
 	router.HandleFunc("/check", handleCheck)
 	router.HandleFunc("/{path}/{res}", handleRoot)
