@@ -1,8 +1,7 @@
 FROM scratch
 
 ADD ./ccentral /ccentral
-ADD index.html /
-ADD ui.js /
+ADD ./web /web
 
 EXPOSE 3000
 
