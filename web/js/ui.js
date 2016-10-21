@@ -51,6 +51,7 @@ m.controller('MainCtrl', ['$scope', '$http',
                     }
                 });
                 $scope.instances = v.data.clients;
+                $scope.instanceTotals = {};
 
                 _.each($scope.instances, function(serviceData, serviceId) {
                     $scope.instanceTags[serviceId] = [];
@@ -58,6 +59,15 @@ m.controller('MainCtrl', ['$scope', '$http',
                         nkey = key;
                         if (key.startsWith("c_")) {
                             nkey = key.substr(2) + " 1/min";
+                            if ($scope.instanceTotals[nkey] === undefined) {
+                                $scope.instanceTotals[nkey] = 0;
+                            }
+                            if (value !== undefined && value > 0) {
+                                $scope.instanceTotals[nkey] += value;
+                            }
+                        }
+                        if (key.startsWith("k_")) {
+                            nkey = key.substr(2);
                         }
                         if (key === "ts") {
                             if (value < (new Date).getTime() / 1000 - 60) {
