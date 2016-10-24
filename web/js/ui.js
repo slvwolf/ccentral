@@ -63,7 +63,7 @@ m.controller('MainCtrl', ['$scope', '$http',
                                 $scope.instanceTotals[nkey] = 0;
                             }
                             if (value !== undefined && value > 0) {
-                                $scope.instanceTotals[nkey] += value;
+                                $scope.instanceTotals[nkey] += parseInt(value);
                             }
                         }
                         if (key.startsWith("k_")) {
