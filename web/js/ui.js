@@ -62,8 +62,8 @@ m.controller('MainCtrl', ['$scope', '$http',
                             if ($scope.instanceTotals[nkey] === undefined) {
                                 $scope.instanceTotals[nkey] = 0;
                             }
-                            if (value !== undefined && value > 0) {
-                                $scope.instanceTotals[nkey] += parseInt(value);
+                            if (value !== undefined && value.length > 0) {
+                                $scope.instanceTotals[nkey] += parseInt(value[value.length - 1]);
                             }
                         }
                         if (key.startsWith("k_")) {
