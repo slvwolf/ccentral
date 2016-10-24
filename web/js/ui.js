@@ -70,11 +70,11 @@ m.controller('MainCtrl', ['$scope', '$http',
                             nkey = key.substr(2);
                         }
                         if (key === "ts") {
-                            if (value < (new Date).getTime() / 1000 - 60) {
+                            if (value < (new Date()).getTime() / 1000 - 60) {
                                 $scope.instanceTags[serviceId].push({"text": "Expired timestamp", "type": "warning"});
                             }
                         } else if (key === "v") {
-                            if (value != $scope.serviceData["v"].value) {
+                            if (value != $scope.serviceData.v.value) {
                                 $scope.instanceTags[serviceId].push({"text": "Old version ( v." + value + " )", "type": "danger"});
                             }
                         } else {
@@ -96,7 +96,7 @@ m.controller('MainCtrl', ['$scope', '$http',
                 return value[value.length - 1];
             }
             return value;
-        }
+        };
 
         $scope.saveField = function(key) {
             data = $scope.serviceData[key].value;
