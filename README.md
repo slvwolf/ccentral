@@ -28,7 +28,7 @@ Parameters also work from environvent variables (`ETCD`, `PORT`)
 
 All libraries should implement:
 
-
+- refresh() 
 
 ### Etcd Keys
 

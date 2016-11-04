@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -132,6 +133,23 @@ func sendZabbix(service *CCentralService, metrics []*metric) {
 	}
 }
 
+func collectInstanceCounters(data map[string]interface{}, counters map[string]int) {
+	for key, value := range data {
+		if strings.HasPrefix(key, "c_") {
+			cList, found := value.([]int)
+			if !found {
+				continue
+			}
+			v := cList[len(cList)-1]
+			if val, ok := counters[key]; ok {
+				counters[key] = val + v
+			} else {
+				counters[key] = v
+			}
+		}
+	}
+}
+
 func pollLoop(service *CCentralService) {
 	for {
 		enabled, _ := service.GetConfigBool("zabbix_enabled")
@@ -146,10 +164,20 @@ func pollLoop(service *CCentralService) {
 				instances, err := GetInstanceList(serviceID)
 				if err == nil {
 					count := len(instances)
+					counters := make(map[string]int)
 					key := fmt.Sprintf("%s.%s", serviceID, "instances")
 					metric := newMetric("ccentral", key, strconv.Itoa(count))
 					metrics = append(metrics, metric)
 					log.Printf("Zabbix: %v", metric)
+					for _, instance := range instances {
+						collectInstanceCounters(instance, counters)
+					}
+					for key, value := range counters {
+						zabbixKey := fmt.Sprintf("%s.%s", serviceID, key)
+						metric := newMetric("ccentral", zabbixKey, strconv.Itoa(value))
+						metrics = append(metrics, metric)
+						log.Printf("Zabbix: %v", metric)
+					}
 				}
 			}
 			sendZabbix(service, metrics)
