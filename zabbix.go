@@ -133,7 +133,7 @@ func sendZabbix(service *CCentralService, metrics []*metric) {
 	}
 }
 
-func collectInstanceCounters(data map[string]interface{}, counters map[string]int) {
+func collectInstanceCounters(data map[string]interface{}, counters map[string]int) map[string]int {
 	for key, value := range data {
 		if strings.HasPrefix(key, "c_") {
 			cList, found := value.([]int)
@@ -146,8 +146,10 @@ func collectInstanceCounters(data map[string]interface{}, counters map[string]in
 			} else {
 				counters[key] = v
 			}
+			log.Printf("Counter incremented %v=%v", key, counters[key])
 		}
 	}
+	return counters
 }
 
 func pollLoop(service *CCentralService) {
@@ -170,7 +172,8 @@ func pollLoop(service *CCentralService) {
 					metrics = append(metrics, metric)
 					log.Printf("Zabbix: %v", metric)
 					for _, instance := range instances {
-						collectInstanceCounters(instance, counters)
+						log.Printf("Collecting counters for %v", serviceID)
+						counters = collectInstanceCounters(instance, counters)
 					}
 					for key, value := range counters {
 						zabbixKey := fmt.Sprintf("%s.%s", serviceID, key)
