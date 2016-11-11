@@ -136,15 +136,19 @@ func sendZabbix(service *CCentralService, metrics []*metric) {
 func collectInstanceCounters(data map[string]interface{}, counters map[string]int) map[string]int {
 	for key, value := range data {
 		if strings.HasPrefix(key, "c_") {
-			cList, found := value.([]float64)
+			cList, found := value.([]interface{})
 			if !found {
 				continue
 			}
 			v := cList[len(cList)-1]
+			iValue, found := v.(int)
+			if !found {
+				continue
+			}
 			if val, ok := counters[key]; ok {
-				counters[key] = val + int(v)
+				counters[key] = val + iValue
 			} else {
-				counters[key] = int(v)
+				counters[key] = iValue
 			}
 			log.Printf("Counter incremented %v=%v", key, counters[key])
 		}
