@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -138,17 +139,19 @@ func collectInstanceCounters(data map[string]interface{}, counters map[string]in
 		if strings.HasPrefix(key, "c_") {
 			cList, found := value.([]interface{})
 			if !found {
+				log.Printf("Problem collecting counters, expected a list but got: " + reflect.TypeOf(value).Name())
 				continue
 			}
 			v := cList[len(cList)-1]
-			iValue, found := v.(int)
+			iValue, found := v.(float64)
 			if !found {
+				log.Printf("Problem collecting counters, list contained unsupported type: " + reflect.TypeOf(v).Name())
 				continue
 			}
 			if val, ok := counters[key]; ok {
-				counters[key] = val + iValue
+				counters[key] = val + int(iValue)
 			} else {
-				counters[key] = iValue
+				counters[key] = int(iValue)
 			}
 			log.Printf("Counter incremented %v=%v", key, counters[key])
 		}
