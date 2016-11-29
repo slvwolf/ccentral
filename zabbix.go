@@ -156,7 +156,7 @@ func collectInstanceCounters(data map[string]interface{}, counters map[string]in
 			} else {
 				counters[key] = int(iValue)
 			}
-			log.Printf("Counter incremented %v=%v", key, counters[key])
+			//log.Printf("Counter incremented %v=%v", key, counters[key])
 		}
 	}
 	return counters
