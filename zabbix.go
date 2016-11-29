@@ -142,6 +142,9 @@ func collectInstanceCounters(data map[string]interface{}, counters map[string]in
 				log.Printf("Problem collecting counters, expected a list but got: " + reflect.TypeOf(value).Name())
 				continue
 			}
+			if len(cList) < 1 {
+				continue
+			}
 			v := cList[len(cList)-1]
 			iValue, found := v.(float64)
 			if !found {
