@@ -1,5 +1,12 @@
 package main
 
+// TODO: Support for API V.1
+// TODO: Add support for "integer" type
+// TODO: Add support for "float" type
+// TODO: Add support for "list" type
+// TODO: Add support for "boolean" type
+// TODO: Add support for "passowrd" type
+
 import (
 	"encoding/json"
 	"errors"
