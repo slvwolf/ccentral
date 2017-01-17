@@ -68,7 +68,7 @@
                 </span>
               </a>
               <ul class="treeview-menu">
-                <li ng-repeat="key in services | orderBy: 'key'"><a href="#" ng-click="selectService(key)"><i class="fa fa-circle-o"></i> {{key}}</a></li>
+                <li ng-repeat="key in services | orderBy"><a href="#" ng-click="selectService(key)"><i class="fa fa-circle-o"></i> {{key}}</a></li>
               </ul>
             </li>
           </ul>
