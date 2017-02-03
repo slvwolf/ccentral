@@ -19,12 +19,11 @@ m.controller('MainCtrl', ['$scope', '$http', '$interval',
         };
 
         $scope.refreshService = function() {
-            service = $scope.service;
             if ($scope.selectedService === "") {
                 return;
             }
             $scope.loading = true;
-            $http.get('/api/1/services/' + service).then(function(v) {
+            $http.get('/api/1/services/' + $scope.selectedService).then(function(v) {
                 if ($scope.serviceData === null) {
                     $scope.serviceData = {
                         "v": {
