@@ -182,18 +182,22 @@
               </div>
             </div>
             <div class="box-body">
-              <div ng-show="serviceData != null">
-                <form action="" method="POST" class="form" role="form">
-                  <div class="form-group" ng-repeat="(key, value) in serviceData">
-                    <label for="{{key}}">{{value.title}}</label>
-                    <p><i>{{value.description}}. Default: '{{value.default}}'</i></p>
-                    <div class="input-group">
-                      <input ng-model="value.value" ng-show="value.type == 'string'"
-                      type="text" class="form-control" id="{{key}}">
-                      <div class="btn btn-success input-group-addon success" ng-click="saveField(key)"><p ng-hide="value.value == value.value_orig">Save</p></div>
-                    </div>
+              <div class="row">
+                <div ng-show="serviceData != null">
+                  <div class="col-md-6 col-xs-12">
+                    <form action="" method="POST" class="form" role="form">
+                      <div class="form-group" ng-repeat="(key, value) in serviceData">
+                        <label for="{{key}}">{{value.title}}</label>
+                        <p><i>{{value.description}}. Default: '{{value.default}}'</i></p>
+                        <div class="input-group">
+                          <input ng-model="value.value" ng-show="value.type == 'string'"
+                          type="text" class="form-control" id="{{key}}">
+                          <div class="btn btn-success input-group-addon success" ng-click="saveField(key)"><p ng-hide="value.value == value.value_orig">Save</p></div>
+                        </div>
+                      </div>
+                    </form>
                   </div>
-                </form>
+                </div>
               </div>
             </div>
             <!-- /.box-body -->

@@ -47,4 +47,11 @@ All libraries should implement:
 #### /ccentral/services/`SERVICE_ID`/clients/`CLIENT_ID`
 
 - `v` : Configuration version
-- `ts` : Last update
+- `cv` : Client library version 
+- `ts` : Last update in epoch seconds
+- `av` : API version
+- `hostname` : Client hostname
+- `lv` : Language version
+- `started` : Epoch timestamp in seconds
+- `uinterval` : Reporting interval
+- `k_` : Prefix for custom keys
