@@ -138,6 +138,8 @@ func handleCheck(w http.ResponseWriter, r *http.Request) {
 func main() {
 	etcdHost := flag.String("etcd", os.Getenv("ETCD"), "etcd locations and port (Default: http://127.0.0.1:2379)")
 	port := flag.String("port", os.Getenv("PORT"), "Port to listen (Default: 3000)")
+	presentation := flag.Bool("presentation", false, "Run in presentation mode")
+
 	flag.Parse()
 	if *etcdHost == "" {
 		*etcdHost = "http://127.0.0.1:2379"
@@ -155,24 +157,31 @@ _________ _________                __                .__
         \/        \/     \/     \/                 \/      `)
 
 	router := mux.NewRouter().StrictSlash(true)
-	InitCCentral(*etcdHost)
-	service := InitCCentralService("ccentral")
-	service.AddSchema("zabbix_enabled", "false", "string", "Zabbix Enabled", "Boolean for enabling or disabling Zabbix monitoring for all services")
-	service.AddSchema("zabbix_host", "localhost", "string", "Zabbix Hostname", "Hostname for Zabbix")
-	service.AddSchema("zabbix_port", "10051", "string", "Zabbix Port", "Port for Zabbix")
-	service.AddSchema("zabbix_interval", "60", "string", "Zabbix Interval", "Update interval for Zabbix metrics")
-	service.AddSchema("graphite_enabled", "false", "string", "Graphite Enabled", "Boolean for enabling or disabling Graphite metrics for all services")
-	service.AddSchema("graphite_host", "localhost", "string", "Graphite Hostname", "Hostname for Graphite")
-	service.AddSchema("graphite_port", "2003", "string", "Graphite Port", "Port for Graphite")
-	service.AddSchema("graphite_interval", "60", "string", "Graphite Interval", "Update interval for Graphite metrics")
 	router.HandleFunc("/", handleRoot)
 	router.HandleFunc("/{res}", handleRoot)
 	router.HandleFunc("/check", handleCheck)
 	router.HandleFunc("/{path}/{res}", handleRoot)
-	router.HandleFunc("/api/1/services", handleServiceList)
-	router.HandleFunc("/api/1/services/{serviceId}", handleService)
-	router.HandleFunc("/api/1/services/{serviceId}/keys/{keyId}", handleItem)
-	startZabbixUpdater(service)
+	if !*presentation {
+		InitCCentral(*etcdHost)
+		service := InitCCentralService("ccentral")
+		service.AddSchema("zabbix_enabled", "false", "string", "Zabbix Enabled", "Boolean for enabling or disabling Zabbix monitoring for all services")
+		service.AddSchema("zabbix_host", "localhost", "string", "Zabbix Hostname", "Hostname for Zabbix")
+		service.AddSchema("zabbix_port", "10051", "string", "Zabbix Port", "Port for Zabbix")
+		service.AddSchema("zabbix_interval", "60", "string", "Zabbix Interval", "Update interval for Zabbix metrics")
+		service.AddSchema("graphite_enabled", "false", "string", "Graphite Enabled", "Boolean for enabling or disabling Graphite metrics for all services")
+		service.AddSchema("graphite_host", "localhost", "string", "Graphite Hostname", "Hostname for Graphite")
+		service.AddSchema("graphite_port", "2003", "string", "Graphite Port", "Port for Graphite")
+		service.AddSchema("graphite_interval", "60", "string", "Graphite Interval", "Update interval for Graphite metrics")
+		router.HandleFunc("/api/1/services", handleServiceList)
+		router.HandleFunc("/api/1/services/{serviceId}", handleService)
+		router.HandleFunc("/api/1/services/{serviceId}/keys/{keyId}", handleItem)
+		startZabbixUpdater(service)
+	} else {
+		log.Printf("Running in PRESENTATION mode")
+		router.HandleFunc("/api/1/services", handleMockServiceList)
+		router.HandleFunc("/api/1/services/{serviceId}", handleMockService)
+		router.HandleFunc("/api/1/services/{serviceId}/keys/{keyId}", handleMockItem)
+	}
 	log.Printf("Admin UI available at :" + *port)
 	err := http.ListenAndServe(":"+*port, router)
 	if err != nil {

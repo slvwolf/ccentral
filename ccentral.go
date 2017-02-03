@@ -46,6 +46,14 @@ type InstanceItem struct {
 	Timestamp float64 `json:"ts"`
 }
 
+func newSchemaItem(defaultValue, itemType, title, description string) *SchemaItem {
+	return &SchemaItem{Default: defaultValue, Type: itemType, Title: title, Description: description}
+}
+
+func newConfigItem(value string, changed int64) *ConfigItem {
+	return &ConfigItem{Value: value, Changed: changed}
+}
+
 // InitCCentral will initialize everything required for CCentral usage
 func InitCCentral(etcdHost string) error {
 	var err error
