@@ -1,7 +1,7 @@
 var m = angular.module('cCentral', []);
 
-m.controller('MainCtrl', ['$scope', '$http',
-    function($scope, $http) {
+m.controller('MainCtrl', ['$scope', '$http', '$interval',
+    function($scope, $http, $interval) {
 
         $scope.selectedService = "";
         $scope.serviceData = null;
@@ -9,6 +9,7 @@ m.controller('MainCtrl', ['$scope', '$http',
         $scope.instances = [];
         $scope.instanceHeaders = {};
         $scope.info = [];
+        $scope.loading = false;
 
         $scope.loadServices = function() {
             $http.get('/api/1/services').then(function(v) {
@@ -17,27 +18,29 @@ m.controller('MainCtrl', ['$scope', '$http',
             });
         };
 
-        $scope.selectService = function(service) {
-            $scope.selectedService = service;
-            $scope.serviceData = null;
-            $scope.instances = [];
-            $scope.instanceHeaders = {};
-            $scope.instanceTags = {};
-            $scope.info = [];
+        $scope.refreshService = function() {
+            service = $scope.service;
+            if ($scope.selectedService === "") {
+                return;
+            }
+            $scope.loading = true;
             $http.get('/api/1/services/' + service).then(function(v) {
-                $scope.serviceData = {
-                    "v": {
-                        "title": "Version",
-                        "type": "string",
-                        "description": "Automatically incremented on each configuration change"
-                    }
-                };
-
+                if ($scope.serviceData === null) {
+                    $scope.serviceData = {
+                        "v": {
+                            "title": "Version",
+                            "type": "string",
+                            "description": "Automatically incremented on each configuration change"
+                        }
+                    };
+                }
                 $scope.info = v.data.info;
                 _.each(v.data.schema, function(v, k) {
-                    $scope.serviceData[k] = v;
-                    v.value = v.default;
-                    v.value_orig = v.default;
+                    if ($scope.serviceData[k] === undefined) {
+                        $scope.serviceData[k] = v;
+                        v.value = v.default;
+                        v.value_orig = v.default;
+                    }
                 });
                 _.each(v.data.config, function(v, k) {
                     if ($scope.serviceData[k] === undefined) {
@@ -46,8 +49,8 @@ m.controller('MainCtrl', ['$scope', '$http',
                             value: v.value
                         };
                     } else {
-                        $scope.serviceData[k].value_orig = v.value;
-                        $scope.serviceData[k].value = v.value;
+                        //$scope.serviceData[k].value_orig = v.value;
+                        //$scope.serviceData[k].value = v.value;
                     }
                 });
                 $scope.instances = v.data.clients;
@@ -85,7 +88,18 @@ m.controller('MainCtrl', ['$scope', '$http',
                         $scope.instanceTags[serviceId].push({"text": "Ok", "type": "success"});
                     }
                 });
+                $scope.loading = false;
             });
+        }
+
+        $scope.selectService = function(service) {
+            $scope.selectedService = service;
+            $scope.serviceData = null;
+            $scope.instances = [];
+            $scope.instanceHeaders = {};
+            $scope.instanceTags = {};
+            $scope.info = [];
+            $scope.refreshService();
         };
 
         $scope.representValue = function(key, value) {
@@ -110,6 +124,6 @@ m.controller('MainCtrl', ['$scope', '$http',
             $scope.serviceData.config[config].newValue = config;
         };
         $scope.loadServices();
-
+        $interval($scope.refreshService, 2000);
     }
 ]);

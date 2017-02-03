@@ -82,7 +82,7 @@
         <section class="content-header" ng-show="selectedService.length > 0">
           <h1>
           {{selectedService}}
-          <small>Configuration</small>
+          <small>Configuration</small><i ng-show="loading" class="fa fa-refresh fa-spin fa-fw"></i>
           </h1>
         </section>
         <section class="content-header" ng-show="selectedService.length === 0">
