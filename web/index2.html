@@ -184,9 +184,9 @@
             <div class="box-body">
               <div class="row">
                 <div ng-show="serviceData != null">
-                  <div class="col-md-6 col-xs-12">
+                  <div class="col-md-6 col-xs-12" ng-repeat="(key, value) in serviceData">
                     <form action="" method="POST" class="form" role="form">
-                      <div class="form-group" ng-repeat="(key, value) in serviceData">
+                      <div class="form-group">
                         <label for="{{key}}">{{value.title}}</label>
                         <p><i>{{value.description}}. Default: '{{value.default}}'</i></p>
                         <div class="input-group">
