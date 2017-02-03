@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 
+	"time"
+
 	"github.com/gorilla/mux"
 )
 
@@ -21,6 +23,9 @@ func handleMockService(w http.ResponseWriter, r *http.Request) {
 	config["example-str-set"] = *newConfigItem("Value is set", 0)
 	config["example-old-conf"] = *newConfigItem("This config should not be shown", 0)
 	instances := make(map[string]map[string]interface{})
+	i := make(map[string]interface{})
+	instances["1234"] = i
+	i["started"] = fmt.Sprintf("%v", time.Now().Unix())
 	info := make(map[string]string)
 	output, err := json.Marshal(newService(schema, config, instances, info))
 	if err != nil {

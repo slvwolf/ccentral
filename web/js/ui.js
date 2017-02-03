@@ -105,6 +105,16 @@ m.controller('MainCtrl', ['$scope', '$http', '$interval',
                 }
                 return value[value.length - 1];
             }
+            if (key === "started") {
+                v = ((new Date).getTime()/1000 - parseInt(value))/60;
+                if (v < 1) {
+                    return "Just now";
+                } else if (v > 60*24) {
+                    return "" + Math.round(v/(60*24)) + " days";
+                } else {
+                    return "" + Math.round(v) + " min";
+                }
+            }
             return value;
         };
 
