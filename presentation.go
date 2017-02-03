@@ -15,9 +15,11 @@ func handleMockService(w http.ResponseWriter, r *http.Request) {
 	setHeaders(w)
 	//serviceID := vars["serviceId"]
 	schema := make(map[string]SchemaItem)
-	schema["example"] = *newSchemaItem("default", "string", "Configuration (String)", "Description for this configuration")
+	schema["example-str-set"] = *newSchemaItem("default", "string", "Configuration SET (String)", "Configuration with some configuration set")
+	schema["example-str-unset"] = *newSchemaItem("default", "string", "Configuration UNSET (String)", "Configuration with default values")
 	config := make(map[string]ConfigItem)
-	config["example"] = *newConfigItem("Current value", 0)
+	config["example-str-set"] = *newConfigItem("Value is set", 0)
+	config["example-old-conf"] = *newConfigItem("This config should not be shown", 0)
 	instances := make(map[string]map[string]interface{})
 	info := make(map[string]string)
 	output, err := json.Marshal(newService(schema, config, instances, info))

@@ -39,17 +39,14 @@ m.controller('MainCtrl', ['$scope', '$http', '$interval',
                         $scope.serviceData[k] = v;
                         v.value = v.default;
                         v.value_orig = v.default;
+                        v.config_set = false;
                     }
                 });
                 _.each(v.data.config, function(v, k) {
-                    if ($scope.serviceData[k] === undefined) {
-                        $scope.serviceData[k] = {
-                            value_orig: v.value,
-                            value: v.value
-                        };
-                    } else {
-                        //$scope.serviceData[k].value_orig = v.value;
-                        //$scope.serviceData[k].value = v.value;
+                    if ($scope.serviceData[k] !== undefined && !$scope.serviceData[k].config_set) {
+                        $scope.serviceData[k].value_orig = v.value;
+                        $scope.serviceData[k].value = v.value;
+                        $scope.serviceData[k].config_set = true;
                     }
                 });
                 $scope.instances = v.data.clients;
