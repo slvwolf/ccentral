@@ -190,8 +190,7 @@
                         <label for="{{key}}">{{value.title}}</label>
                         <p><i>{{value.description}}. Default: '{{value.default}}'</i></p>
                         <div class="input-group">
-                          <input ng-model="value.value" ng-show="value.type == 'string'"
-                          type="text" class="form-control" id="{{key}}">
+                          <input ng-model="value.value" type="text" class="form-control" id="{{key}}">
                           <div class="btn btn-success input-group-addon success" ng-click="saveField(key)"><p ng-hide="value.value == value.value_orig || value.value === null">Save</p></div>
                         </div>
                       </div>
