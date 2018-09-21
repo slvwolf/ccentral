@@ -19,14 +19,18 @@ func handleMockService(w http.ResponseWriter, r *http.Request) {
 	schema := make(map[string]SchemaItem)
 	schema["example-str-set"] = *newSchemaItem("default", "string", "Configuration SET (String)", "Configuration with some configuration set")
 	schema["example-str-unset"] = *newSchemaItem("default", "string", "Configuration UNSET (String)", "Configuration with default values")
+	schema["example-password-set"] = *newSchemaItem("default", "password", "Configuration SET (Password)", "Configuration with some configuration set")
+	schema["example-password-unset"] = *newSchemaItem("default", "password", "Configuration UNSET (Password)", "Configuration with default values")
 	config := make(map[string]ConfigItem)
 	config["example-str-set"] = *newConfigItem("Value is set", 0)
 	config["example-old-conf"] = *newConfigItem("This config should not be shown", 0)
+	config["example-password-set"] = *newConfigItem("Value is set", 0)
 	instances := make(map[string]map[string]interface{})
 	i := make(map[string]interface{})
 	instances["1234"] = i
 	i["started"] = fmt.Sprintf("%v", time.Now().Unix())
 	info := make(map[string]string)
+	hidePasswordFields(schema, config)
 	output, err := json.Marshal(newService(schema, config, instances, info))
 	if err != nil {
 		writeInternalError(w, "Could not convert to json", http.StatusInternalServerError)

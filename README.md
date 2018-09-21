@@ -22,13 +22,16 @@ Parameters also work from environvent variables (`ETCD`, `PORT`)
 
 ## Client
 
-`Everything below is still WiP`
+### Configuration Field Types
 
-### Library
-
-All libraries should implement:
-
-- refresh() 
+| Type     | Description                                          |
+| -------- | ---------------------------------------------------- |
+| string   | Plain string                                         |
+| password | String field which wont be showed in UI              |
+| integer  | Integer                                              |
+| float    | Floaf                                                |
+| list     | List, stored internally in JSON ["field1", "field2"] |
+| boolean  | 1 or 0                                               |
 
 ### Etcd Keys
 

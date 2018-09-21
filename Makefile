@@ -21,3 +21,9 @@ vendor_get: vendor_clean
 	github.com/gorilla/mux \
 	github.com/coreos/etcd/client \
 	golang.org/x/net/context
+
+vendor_get_clean:
+	go get -d -u -v \
+        github.com/gorilla/mux \
+        github.com/coreos/etcd/client \
+        golang.org/x/net/context
