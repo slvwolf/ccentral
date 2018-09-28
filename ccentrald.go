@@ -97,6 +97,18 @@ func handleItem(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Configuration updated: [%v] %v=%v (version: %v)", string(serviceID), string(keyID), string(value), version)
 }
 
+func hidePasswordFields(schema map[string]SchemaItem, config map[string]ConfigItem) {
+	for k, v := range schema {
+		if v.Type == "password" {
+			iv, ok := config[k]
+			if ok == true {
+				iv.Value = "******"
+			}
+			config[k] = iv
+		}
+	}
+}
+
 func handleService(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	setHeaders(w)
@@ -123,6 +135,7 @@ func handleService(w http.ResponseWriter, r *http.Request) {
 		writeInternalError(w, "Could not retrieve service info", http.StatusInternalServerError)
 		return
 	}
+	hidePasswordFields(schema, config)
 	output, err := json.Marshal(newService(schema, config, instances, info))
 	if err != nil {
 		writeInternalError(w, "Could not convert to json", http.StatusInternalServerError)
