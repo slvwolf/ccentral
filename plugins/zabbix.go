@@ -1,4 +1,4 @@
-package main
+package plugins
 
 import (
 	"encoding/binary"
@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/slvwolf/ccentral/client"
 )
 
 type metric struct {
@@ -123,7 +125,7 @@ func (s *sender) send(packet *packet) ([]byte, error) {
 	return res, nil
 }
 
-func sendZabbix(service *CCentralService, metrics []*metric) {
+func sendZabbix(service *client.CCentralService, metrics []*metric) {
 	packet := newPacket(metrics)
 	hostname, _ := service.GetConfig("zabbix_host")
 	port, _ := service.GetConfigInt("zabbix_port")
@@ -139,7 +141,7 @@ func collectInstanceCounters(data map[string]interface{}, counters map[string]in
 		if strings.HasPrefix(key, "c_") {
 			cList, found := value.([]interface{})
 			if !found {
-				log.Printf("Problem collecting counters, expected a list but got: " + reflect.TypeOf(value).Name())
+				log.Printf("Problem collecting counters, expected a list but got: %T", value)
 				continue
 			}
 			if len(cList) < 1 {
@@ -156,24 +158,23 @@ func collectInstanceCounters(data map[string]interface{}, counters map[string]in
 			} else {
 				counters[key] = int(iValue)
 			}
-			//log.Printf("Counter incremented %v=%v", key, counters[key])
 		}
 	}
 	return counters
 }
 
-func pollLoop(service *CCentralService) {
+func pollLoop(service *client.CCentralService, cc client.CCServerReadApi) {
 	for {
 		enabled, _ := service.GetConfigBool("zabbix_enabled")
 		if enabled {
 			var metrics []*metric
-			serviceList, err := GetServiceList()
+			serviceList, err := cc.GetServiceList()
 			if err != nil {
 				log.Printf("WARN Could not retrieve service list")
 			}
 			for _, serviceID := range serviceList.Services {
 				log.Printf("Handling service %v", serviceID)
-				instances, err := GetInstanceList(serviceID)
+				instances, err := cc.GetInstanceList(serviceID)
 				if err == nil {
 					count := len(instances)
 					counters := make(map[string]int)
@@ -201,6 +202,7 @@ func pollLoop(service *CCentralService) {
 	}
 }
 
-func startZabbixUpdater(service *CCentralService) {
-	go pollLoop(service)
+// StartZabbixUpdater - Start zabbix poll loop
+func StartZabbixUpdater(service *client.CCentralService, cc client.CCServerReadApi) {
+	go pollLoop(service, cc)
 }

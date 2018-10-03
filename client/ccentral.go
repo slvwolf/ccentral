@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"errors"
@@ -13,11 +13,25 @@ type CCentralService struct {
 	servideID            string
 	config               map[string]ConfigItem
 	schema               map[string]SchemaItem
+	cc                   CCApi
+}
+
+// NewService - Create a new service container
+func NewService(
+	schema map[string]SchemaItem,
+	config map[string]ConfigItem,
+	instances map[string]map[string]interface{},
+	info map[string]string) *Service {
+	return &Service{Schema: schema, Config: config, Instances: instances, Info: info}
 }
 
 // InitCCentralService returns service struct for easier configuration access
-func InitCCentralService(serviceID string) *CCentralService {
-	service := CCentralService{servideID: serviceID, schema: make(map[string]SchemaItem), config: make(map[string]ConfigItem)}
+func InitCCentralService(cc CCApi, serviceID string) *CCentralService {
+	service := CCentralService{
+		servideID: serviceID,
+		schema:    make(map[string]SchemaItem),
+		config:    make(map[string]ConfigItem),
+		cc:        cc}
 	return &service
 }
 
@@ -38,13 +52,13 @@ func (s *CCentralService) UpdateConfig() error {
 // ForceUpdateConfig will force configuration update
 func (s *CCentralService) ForceUpdateConfig() error {
 	if s.lastCheck == 0 {
-		err := SetSchema(s.servideID, s.schema)
+		err := s.cc.SetSchema(s.servideID, s.schema)
 		if err != nil {
 			s.lastCheck = time.Now().Unix()
 			return err
 		}
 	}
-	config, err := GetConfig(s.servideID)
+	config, err := s.cc.GetConfig(s.servideID)
 	s.lastCheck = time.Now().Unix()
 	if err != nil {
 		return err
