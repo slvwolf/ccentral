@@ -1,4 +1,4 @@
-package main
+package client
 
 // TODO: Support for API V.1
 // TODO: Add support for "integer" type
@@ -18,8 +18,6 @@ import (
 	"github.com/coreos/etcd/client"
 	"golang.org/x/net/context"
 )
-
-var etcd client.KeysAPI
 
 // ServiceList contains list of serviceIDs
 type ServiceList struct {
@@ -46,16 +44,73 @@ type InstanceItem struct {
 	Timestamp float64 `json:"ts"`
 }
 
-func newSchemaItem(defaultValue, itemType, title, description string) *SchemaItem {
+// CCApi - Interface for CCentral methods
+type CCApi interface {
+	GetServiceInfoList(serviceID string) (map[string]string, error)
+	GetServiceList() (ServiceList, error)
+	InitCCentral(etcdHost string) error
+	GetInstanceList(serviceID string) (map[string]map[string]interface{}, error)
+	SetConfigItem(serviceID string, keyID string, value string) (string, error)
+	GetSchema(serviceID string) (map[string]SchemaItem, error)
+	SetSchema(serviceID string, schema map[string]SchemaItem) error
+	GetConfig(serviceID string) (map[string]ConfigItem, error)
+}
+
+type CCInit interface {
+	InitCCentral(etcdHost string) error
+}
+
+type CCClientApi interface {
+	SetSchema(serviceID string, schema map[string]SchemaItem) error
+	GetConfig(serviceID string) (map[string]ConfigItem, error)
+}
+
+type CCClientReadApi interface {
+	GetConfig(serviceID string) (map[string]ConfigItem, error)
+}
+
+type CCClientWriteApi interface {
+	SetSchema(serviceID string, schema map[string]SchemaItem) error
+}
+
+type CCServerReadApi interface {
+	GetServiceInfoList(serviceID string) (map[string]string, error)
+	GetServiceList() (ServiceList, error)
+	GetInstanceList(serviceID string) (map[string]map[string]interface{}, error)
+	GetSchema(serviceID string) (map[string]SchemaItem, error)
+	GetConfig(serviceID string) (map[string]ConfigItem, error)
+}
+
+type CCServerWriteApi interface {
+	SetConfigItem(serviceID string, keyID string, value string) (string, error)
+	SetSchema(serviceID string, schema map[string]SchemaItem) error
+}
+
+// Service is a container for all service data
+type Service struct {
+	Schema    map[string]SchemaItem             `json:"schema"`
+	Config    map[string]ConfigItem             `json:"config"`
+	Instances map[string]map[string]interface{} `json:"clients"`
+	Info      map[string]string                 `json:"info"`
+}
+
+// CCService - ...
+type CCService struct {
+	etcd client.KeysAPI
+}
+
+// NewSchemaItem - Represents single entry in schema which contains metadata for ConfigItem
+func NewSchemaItem(defaultValue, itemType, title, description string) *SchemaItem {
 	return &SchemaItem{Default: defaultValue, Type: itemType, Title: title, Description: description}
 }
 
-func newConfigItem(value string, changed int64) *ConfigItem {
+// NewConfigItem - Value container for configuration entry (based on SchemaItem)
+func NewConfigItem(value string, changed int64) *ConfigItem {
 	return &ConfigItem{Value: value, Changed: changed}
 }
 
 // InitCCentral will initialize everything required for CCentral usage
-func InitCCentral(etcdHost string) error {
+func (cc *CCService) InitCCentral(etcdHost string) error {
 	var err error
 	log.Printf("Connecting to %s", etcdHost)
 	cfg := client.Config{Endpoints: []string{etcdHost}}
@@ -64,13 +119,13 @@ func InitCCentral(etcdHost string) error {
 		log.Printf("Could not initialize CCentral: %v", err)
 		return err
 	}
-	etcd = client.NewKeysAPI(e)
+	cc.etcd = client.NewKeysAPI(e)
 	return nil
 }
 
 // GetServiceList returns list of available services
-func GetServiceList() (ServiceList, error) {
-	resp, err := etcd.Get(context.Background(), "/ccentral/services/", nil)
+func (cc *CCService) GetServiceList() (ServiceList, error) {
+	resp, err := cc.etcd.Get(context.Background(), "/ccentral/services/", nil)
 	if err != nil {
 		log.Printf(err.Error())
 		return ServiceList{}, err
@@ -85,9 +140,9 @@ func GetServiceList() (ServiceList, error) {
 }
 
 // GetInstanceList returns full information of each running service instance
-func GetInstanceList(serviceID string) (map[string]map[string]interface{}, error) {
+func (cc *CCService) GetInstanceList(serviceID string) (map[string]map[string]interface{}, error) {
 	instances := make(map[string]map[string]interface{})
-	resp, err := etcd.Get(context.Background(), "/ccentral/services/"+serviceID+"/clients", nil)
+	resp, err := cc.etcd.Get(context.Background(), "/ccentral/services/"+serviceID+"/clients", nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "Key not found") {
 			log.Printf("No instances found for service %v", serviceID)
@@ -127,8 +182,8 @@ func incrementVersion(config map[string]ConfigItem) string {
 }
 
 // SetConfigItem allows changing the service configuration
-func SetConfigItem(serviceID string, keyID string, value string) (string, error) {
-	config, err := GetConfig(serviceID)
+func (cc *CCService) SetConfigItem(serviceID string, keyID string, value string) (string, error) {
+	config, err := cc.GetConfig(serviceID)
 	if err != nil {
 		return "", errors.New("Could not retrieve service configuration: " + err.Error())
 	}
@@ -144,7 +199,7 @@ func SetConfigItem(serviceID string, keyID string, value string) (string, error)
 		return "", errors.New("Could not convert to json: " + err.Error())
 	}
 
-	_, err = etcd.Set(context.Background(), "/ccentral/services/"+serviceID+"/config", string(output), nil)
+	_, err = cc.etcd.Set(context.Background(), "/ccentral/services/"+serviceID+"/config", string(output), nil)
 	if err != nil {
 		return "", errors.New("Could not update configuration: " + err.Error())
 	}
@@ -152,8 +207,8 @@ func SetConfigItem(serviceID string, keyID string, value string) (string, error)
 }
 
 // GetSchema returns configuration schema
-func GetSchema(serviceID string) (map[string]SchemaItem, error) {
-	resp, err := etcd.Get(context.Background(), "/ccentral/services/"+serviceID+"/schema", nil)
+func (cc *CCService) GetSchema(serviceID string) (map[string]SchemaItem, error) {
+	resp, err := cc.etcd.Get(context.Background(), "/ccentral/services/"+serviceID+"/schema", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -163,12 +218,12 @@ func GetSchema(serviceID string) (map[string]SchemaItem, error) {
 }
 
 // SetSchema writes the new schema to the etcd
-func SetSchema(serviceID string, schema map[string]SchemaItem) error {
+func (cc *CCService) SetSchema(serviceID string, schema map[string]SchemaItem) error {
 	data, err := json.Marshal(schema)
 	if err != nil {
 		return err
 	}
-	_, err = etcd.Set(context.Background(), "/ccentral/services/"+serviceID+"/schema", string(data), nil)
+	_, err = cc.etcd.Set(context.Background(), "/ccentral/services/"+serviceID+"/schema", string(data), nil)
 	if err != nil {
 		return err
 	}
@@ -176,9 +231,9 @@ func SetSchema(serviceID string, schema map[string]SchemaItem) error {
 }
 
 // GetServiceInfoList returns list of service shared service information reported by the clients
-func GetServiceInfoList(serviceID string) (map[string]string, error) {
+func (cc *CCService) GetServiceInfoList(serviceID string) (map[string]string, error) {
 	info := make(map[string]string)
-	resp, err := etcd.Get(context.Background(), "/ccentral/services/"+serviceID+"/info", nil)
+	resp, err := cc.etcd.Get(context.Background(), "/ccentral/services/"+serviceID+"/info", nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "Key not found") {
 			log.Printf("No service info found for service %v", serviceID)
@@ -199,8 +254,8 @@ func GetServiceInfoList(serviceID string) (map[string]string, error) {
 }
 
 // GetConfig returns full listing of service configuration
-func GetConfig(serviceID string) (map[string]ConfigItem, error) {
-	resp, err := etcd.Get(context.Background(), "/ccentral/services/"+serviceID+"/config", nil)
+func (cc *CCService) GetConfig(serviceID string) (map[string]ConfigItem, error) {
+	resp, err := cc.etcd.Get(context.Background(), "/ccentral/services/"+serviceID+"/config", nil)
 	if err != nil {
 		// Most likely new service that has only schema setup, just ignore the missing configuration
 		if strings.Contains(err.Error(), "100: Key not found") {

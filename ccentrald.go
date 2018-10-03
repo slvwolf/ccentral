@@ -8,21 +8,15 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/slvwolf/ccentral/client"
+	Plugins "github.com/slvwolf/ccentral/plugins"
 )
 
-// Service is a container for all service data
-type service struct {
-	Schema    map[string]SchemaItem             `json:"schema"`
-	Config    map[string]ConfigItem             `json:"config"`
-	Instances map[string]map[string]interface{} `json:"clients"`
-	Info      map[string]string                 `json:"info"`
-}
-
-func newService(schema map[string]SchemaItem, config map[string]ConfigItem, instances map[string]map[string]interface{}, info map[string]string) *service {
-	return &service{Schema: schema, Config: config, Instances: instances, Info: info}
-}
+var cc client.CCApi
+var ccService *client.CCentralService
 
 func writeInternalError(w http.ResponseWriter, msg string, status int) {
 	w.WriteHeader(status)
@@ -55,7 +49,7 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 
 func handleServiceList(w http.ResponseWriter, r *http.Request) {
 	setHeaders(w)
-	serviceList, err := GetServiceList()
+	serviceList, err := cc.GetServiceList()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "{\"error\": \"Could not retrieve configuration\"}")
@@ -87,7 +81,7 @@ func handleItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	version, err := SetConfigItem(string(serviceID), string(keyID), string(value))
+	version, err := cc.SetConfigItem(string(serviceID), string(keyID), string(value))
 
 	if err != nil {
 		writeInternalError(w, err.Error(), http.StatusInternalServerError)
@@ -97,7 +91,7 @@ func handleItem(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Configuration updated: [%v] %v=%v (version: %v)", string(serviceID), string(keyID), string(value), version)
 }
 
-func hidePasswordFields(schema map[string]SchemaItem, config map[string]ConfigItem) {
+func hidePasswordFields(schema map[string]client.SchemaItem, config map[string]client.ConfigItem) {
 	for k, v := range schema {
 		if v.Type == "password" {
 			iv, ok := config[k]
@@ -113,35 +107,45 @@ func handleService(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	setHeaders(w)
 	serviceID := vars["serviceId"]
-	schema, err := GetSchema(serviceID)
+	schema, err := cc.GetSchema(serviceID)
 	if err != nil {
 		writeInternalError(w, "Could not retrieve service schema", http.StatusInternalServerError)
 		return
 	}
-	config, err := GetConfig(serviceID)
+	config, err := cc.GetConfig(serviceID)
 	if err != nil {
 		writeInternalError(w, "Could not retrieve config", http.StatusInternalServerError)
 		return
 	}
-	instances, err := GetInstanceList(serviceID)
+	instances, err := cc.GetInstanceList(serviceID)
 	if err != nil {
 		log.Printf("Problem getting instances: %v", err)
 		writeInternalError(w, "Could not retrieve instances", http.StatusInternalServerError)
 		return
 	}
-	info, err := GetServiceInfoList(serviceID)
+	info, err := cc.GetServiceInfoList(serviceID)
 	if err != nil {
 		log.Printf("Problem getting service info: %v", err)
 		writeInternalError(w, "Could not retrieve service info", http.StatusInternalServerError)
 		return
 	}
 	hidePasswordFields(schema, config)
-	output, err := json.Marshal(newService(schema, config, instances, info))
+	output, err := json.Marshal(client.NewService(schema, config, instances, info))
 	if err != nil {
 		writeInternalError(w, "Could not convert to json", http.StatusInternalServerError)
 		return
 	}
 	fmt.Fprintf(w, string(output))
+}
+
+func handlePrometheus(w http.ResponseWriter, r *http.Request) {
+	enabled, _ := ccService.GetConfigBool("prometheus_enabled")
+	if enabled {
+		data, _ := Plugins.GeneratePrometheusPayload(cc, time.Now())
+		fmt.Fprintf(w, string(data))
+	} else {
+		fmt.Fprintf(w, "# Prometheus metrics are disabled")
+	}
 }
 
 func handleCheck(w http.ResponseWriter, r *http.Request) {
@@ -174,22 +178,22 @@ _________ _________                __                .__
 	router.HandleFunc("/{res}", handleRoot)
 	router.HandleFunc("/check", handleCheck)
 	router.HandleFunc("/{path}/{res}", handleRoot)
+	cc = &(client.CCService{})
 	if !*presentation {
-		InitCCentral(*etcdHost)
-		service := InitCCentralService("ccentral")
-		service.AddSchema("zabbix_enabled", "false", "string", "Zabbix Enabled", "Boolean for enabling or disabling Zabbix monitoring for all services")
-		service.AddSchema("zabbix_host", "localhost", "string", "Zabbix Hostname", "Hostname for Zabbix")
-		service.AddSchema("zabbix_port", "10051", "string", "Zabbix Port", "Port for Zabbix")
-		service.AddSchema("zabbix_interval", "60", "string", "Zabbix Interval", "Update interval for Zabbix metrics")
-		service.AddSchema("graphite_enabled", "false", "string", "Graphite Enabled", "Boolean for enabling or disabling Graphite metrics for all services")
-		service.AddSchema("graphite_host", "localhost", "string", "Graphite Hostname", "Hostname for Graphite")
-		service.AddSchema("graphite_port", "2003", "string", "Graphite Port", "Port for Graphite")
-		service.AddSchema("graphite_interval", "60", "string", "Graphite Interval", "Update interval for Graphite metrics")
+		cc.InitCCentral(*etcdHost)
+		ccService = client.InitCCentralService(cc, "ccentral")
+		ccService.AddSchema("zabbix_enabled", "0", "boolean", "Zabbix Enabled", "Boolean for enabling or disabling Zabbix monitoring for all services")
+		ccService.AddSchema("zabbix_host", "localhost", "string", "Zabbix Hostname", "Hostname for Zabbix")
+		ccService.AddSchema("zabbix_port", "10051", "integer", "Zabbix Port", "Port for Zabbix")
+		ccService.AddSchema("zabbix_interval", "60", "integer", "Zabbix Interval", "Update interval for Zabbix metrics")
+		ccService.AddSchema("prometheus_enabled", "0", "boolean", "Prometheus Enabled", "Boolean for enabling or disabling prometheus endpoint (/prometheus)")
 		router.HandleFunc("/api/1/services", handleServiceList)
 		router.HandleFunc("/api/1/services/{serviceId}", handleService)
 		router.HandleFunc("/api/1/services/{serviceId}/keys/{keyId}", handleItem)
-		startZabbixUpdater(service)
+		router.HandleFunc("/prometheus", handlePrometheus)
+		Plugins.StartZabbixUpdater(ccService, cc)
 	} else {
+		// TODO: User mocked CCApi instead
 		log.Printf("Running in PRESENTATION mode")
 		router.HandleFunc("/api/1/services", handleMockServiceList)
 		router.HandleFunc("/api/1/services/{serviceId}", handleMockService)

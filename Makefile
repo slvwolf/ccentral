@@ -4,26 +4,17 @@ export GOPATH
 
 all: test build
 
+get:
+	$(GO) get github.com/gorilla/mux
+	$(GO) get github.com/coreos/etcd/client
+	$(GO) get golang.org/x/net/context
+	$(GO) get github.com/stretchr/testify/assert
+	
 test:
 	$(GO) test
 
 build:
 	$(GO) build
 
-static:
+static_linux:
 	env GOOS=linux GOARCH=amd64 $(GO) build -a -ldflags '-s' -tags netgo -installsuffix netgo -v -o ccentral
-
-vendor_clean:
-	rm -dRf ${PWD}/vendor/src
-
-vendor_get: vendor_clean
-	GOPATH=${PWD}/vendor go get -d -u -v \
-	github.com/gorilla/mux \
-	github.com/coreos/etcd/client \
-	golang.org/x/net/context
-
-vendor_get_clean:
-	go get -d -u -v \
-        github.com/gorilla/mux \
-        github.com/coreos/etcd/client \
-        golang.org/x/net/context
