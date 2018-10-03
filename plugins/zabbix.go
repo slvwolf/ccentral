@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	CCC "github.com/slvwolf/ccentral/client"
+	"github.com/slvwolf/ccentral/client"
 )
 
 type metric struct {
@@ -125,7 +125,7 @@ func (s *sender) send(packet *packet) ([]byte, error) {
 	return res, nil
 }
 
-func sendZabbix(service *CCC.CCentralService, metrics []*metric) {
+func sendZabbix(service *client.CCentralService, metrics []*metric) {
 	packet := newPacket(metrics)
 	hostname, _ := service.GetConfig("zabbix_host")
 	port, _ := service.GetConfigInt("zabbix_port")
@@ -163,7 +163,7 @@ func collectInstanceCounters(data map[string]interface{}, counters map[string]in
 	return counters
 }
 
-func pollLoop(service *CCC.CCentralService, cc CCC.CCServerReadApi) {
+func pollLoop(service *client.CCentralService, cc client.CCServerReadApi) {
 	for {
 		enabled, _ := service.GetConfigBool("zabbix_enabled")
 		if enabled {
@@ -203,6 +203,6 @@ func pollLoop(service *CCC.CCentralService, cc CCC.CCServerReadApi) {
 }
 
 // StartZabbixUpdater - Start zabbix poll loop
-func StartZabbixUpdater(service *CCC.CCentralService, cc CCC.CCServerReadApi) {
+func StartZabbixUpdater(service *client.CCentralService, cc client.CCServerReadApi) {
 	go pollLoop(service, cc)
 }

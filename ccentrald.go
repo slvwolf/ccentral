@@ -12,7 +12,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/slvwolf/ccentral/client"
-	Plugins "github.com/slvwolf/ccentral/plugins"
+	"github.com/slvwolf/ccentral/plugins"
 )
 
 var cc client.CCApi
@@ -20,7 +20,7 @@ var ccService *client.CCentralService
 
 func writeInternalError(w http.ResponseWriter, msg string, status int) {
 	w.WriteHeader(status)
-	fmt.Fprintf(w, "{\"error\": \""+msg+"\"}")
+	w.Write([]byte("{\"error\": \"" + msg + "\"}"))
 }
 
 func setHeaders(w http.ResponseWriter) {
@@ -52,17 +52,17 @@ func handleServiceList(w http.ResponseWriter, r *http.Request) {
 	serviceList, err := cc.GetServiceList()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "{\"error\": \"Could not retrieve configuration\"}")
+		w.Write([]byte("{\"error\": \"Could not retrieve configuration\"}"))
 		return
 	}
 	v, err := json.Marshal(serviceList)
 	if err != nil {
 		log.Printf(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "{\"error\": \"Error marshalling json\"}")
+		w.Write([]byte("{\"error\": \"Error marshalling json\"}"))
 		return
 	}
-	fmt.Fprintf(w, string(v))
+	w.Write(v)
 }
 
 func handleItem(w http.ResponseWriter, r *http.Request) {
@@ -135,16 +135,20 @@ func handleService(w http.ResponseWriter, r *http.Request) {
 		writeInternalError(w, "Could not convert to json", http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprintf(w, string(output))
+	w.Write(output)
 }
 
 func handlePrometheus(w http.ResponseWriter, r *http.Request) {
 	enabled, _ := ccService.GetConfigBool("prometheus_enabled")
 	if enabled {
-		data, _ := Plugins.GeneratePrometheusPayload(cc, time.Now())
-		fmt.Fprintf(w, string(data))
+		data, err := plugins.GeneratePrometheusPayload(cc, time.Now())
+		if err != nil {
+			writeInternalError(w, "Failed to generate payload", 500)
+			return
+		}
+		w.Write(data)
 	} else {
-		fmt.Fprintf(w, "# Prometheus metrics are disabled")
+		w.Write([]byte("# Prometheus metrics are disabled"))
 	}
 }
 
@@ -178,9 +182,12 @@ _________ _________                __                .__
 	router.HandleFunc("/{res}", handleRoot)
 	router.HandleFunc("/check", handleCheck)
 	router.HandleFunc("/{path}/{res}", handleRoot)
-	cc = &(client.CCService{})
+	cc = &client.CCService{}
 	if !*presentation {
-		cc.InitCCentral(*etcdHost)
+		err := cc.InitCCentral(*etcdHost)
+		if err != nil {
+			panic("Could not initialize CCentral")
+		}
 		ccService = client.InitCCentralService(cc, "ccentral")
 		ccService.AddSchema("zabbix_enabled", "0", "boolean", "Zabbix Enabled", "Boolean for enabling or disabling Zabbix monitoring for all services")
 		ccService.AddSchema("zabbix_host", "localhost", "string", "Zabbix Hostname", "Hostname for Zabbix")
@@ -191,7 +198,7 @@ _________ _________                __                .__
 		router.HandleFunc("/api/1/services/{serviceId}", handleService)
 		router.HandleFunc("/api/1/services/{serviceId}/keys/{keyId}", handleItem)
 		router.HandleFunc("/prometheus", handlePrometheus)
-		Plugins.StartZabbixUpdater(ccService, cc)
+		plugins.StartZabbixUpdater(ccService, cc)
 	} else {
 		// TODO: User mocked CCApi instead
 		log.Printf("Running in PRESENTATION mode")

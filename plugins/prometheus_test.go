@@ -24,8 +24,8 @@ func (*mockApi) GetServiceInfoList(serviceID string) (map[string]string, error) 
 }
 
 func (*mockApi) GetServiceList() (client.ServiceList, error) {
-	s := make([]string, 1)
-	s[0] = "service1"
+	var s []string
+	s = append(s, "service1")
 	result := client.ServiceList{Services: s}
 	return result, nil
 }

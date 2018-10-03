@@ -1,14 +1,12 @@
 GO ?= go
-GOPATH := ${PWD}/vendor:$(GOPATH)
-export GOPATH
 
 all: test build
 
 get:
-	$(GO) get github.com/gorilla/mux
-	$(GO) get github.com/coreos/etcd/client
-	$(GO) get golang.org/x/net/context
-	$(GO) get github.com/stretchr/testify/assert
+	$(GO) get -u github.com/gorilla/mux
+	$(GO) get -u github.com/coreos/etcd/client
+	$(GO) get -u golang.org/x/net/context
+	$(GO) get -u github.com/stretchr/testify/assert
 	
 test:
 	$(GO) test
