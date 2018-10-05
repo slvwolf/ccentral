@@ -193,11 +193,11 @@ _________ _________                __                .__
 		ccService.AddSchema("zabbix_host", "localhost", "string", "Zabbix Hostname", "Hostname for Zabbix")
 		ccService.AddSchema("zabbix_port", "10051", "integer", "Zabbix Port", "Port for Zabbix")
 		ccService.AddSchema("zabbix_interval", "60", "integer", "Zabbix Interval", "Update interval for Zabbix metrics")
-		ccService.AddSchema("prometheus_enabled", "0", "boolean", "Prometheus Enabled", "Boolean for enabling or disabling prometheus endpoint (/plugins/prometheus)")
+		ccService.AddSchema("prometheus_enabled", "0", "boolean", "Prometheus Enabled", "Boolean for enabling or disabling prometheus endpoint (/plugins/prometheus/data)")
 		router.HandleFunc("/api/1/services", handleServiceList)
 		router.HandleFunc("/api/1/services/{serviceId}", handleService)
 		router.HandleFunc("/api/1/services/{serviceId}/keys/{keyId}", handleItem)
-		router.HandleFunc("/plugins/prometheus", handlePrometheus)
+		router.HandleFunc("/plugins/prometheus/data", handlePrometheus)
 		plugins.StartZabbixUpdater(ccService, cc)
 	} else {
 		// TODO: User mocked CCApi instead
