@@ -13,13 +13,21 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"regexp"
+	"strings"
 
 	"github.com/slvwolf/ccentral/client"
 )
 
+var valueRe = regexp.MustCompile(`[^a-zA-Z0-9_:]`)
+
 // UnixTime - Provides unix epoch in seconds
 type UnixTime interface {
 	Unix() int64
+}
+
+func cleanValue(value string) string {
+	return valueRe.ReplaceAllString(strings.ToLower(value), ``)
 }
 
 // GeneratePrometheusPayload - Collect and create Prometheus payload
@@ -41,17 +49,20 @@ func GeneratePrometheusPayload(cc client.CCServerReadApi, unixTime UnixTime) ([]
 		count := len(instances)
 		counters := make(map[string]int)
 
+		cleanServiceID := cleanValue(serviceID)
+
 		// Write active instance count
-		buffer.WriteString(fmt.Sprintf("# TYPE cc_%s_instances gauge\n", serviceID))
-		buffer.WriteString(fmt.Sprintf("cc_%s_instances %d %d\n", serviceID, count, epoch))
+		buffer.WriteString(fmt.Sprintf("# TYPE cc_%s_instances gauge\n", cleanServiceID))
+		buffer.WriteString(fmt.Sprintf("cc_%s_instances %d %d\n", cleanServiceID, count, epoch))
 
 		for _, instance := range instances {
 			log.Printf("Collecting counters for %v", serviceID)
 			counters = collectInstanceCounters(instance, counters)
 		}
 		for key, value := range counters {
-			buffer.WriteString(fmt.Sprintf("# TYPE cc_%s_%s gauge\n", serviceID, key))
-			buffer.WriteString(fmt.Sprintf("cc_%s_%s %d %d\n", serviceID, key, value, epoch))
+			cleanKey := cleanValue(key)
+			buffer.WriteString(fmt.Sprintf("# TYPE cc_%s_%s gauge\n", cleanServiceID, cleanKey))
+			buffer.WriteString(fmt.Sprintf("cc_%s_%s %d %d\n", cleanServiceID, cleanKey, value, epoch))
 		}
 	}
 	return buffer.Bytes(), nil
