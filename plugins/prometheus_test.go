@@ -58,7 +58,7 @@ func TestResultFormatting(t *testing.T) {
 	unix := &(mockUnix{})
 	data, error := plugins.GeneratePrometheusPayload(api, unix)
 	assert.Nil(t, error)
-	assert.Equal(t, "# TYPE cc_service1_instances gauge\ncc_service1_instances 1 100\n# TYPE cc_service1_c_one gauge\ncc_service1_c_one 2 100\n", string(data))
+	assert.Equal(t, "# TYPE cc_service1_instances gauge\ncc_service1_instances 1 100000\n# TYPE cc_service1_c_one gauge\ncc_service1_c_one 2 100000\n", string(data))
 }
 
 func TestResultFormattingCleansServiceName(t *testing.T) {
@@ -66,7 +66,7 @@ func TestResultFormattingCleansServiceName(t *testing.T) {
 	unix := &(mockUnix{})
 	data, error := plugins.GeneratePrometheusPayload(api, unix)
 	assert.Nil(t, error)
-	assert.Equal(t, "# TYPE cc_service1_instances gauge\ncc_service1_instances 1 100\n# TYPE cc_service1_c_one gauge\ncc_service1_c_one 2 100\n", string(data))
+	assert.Equal(t, "# TYPE cc_service1_instances gauge\ncc_service1_instances 1 100000\n# TYPE cc_service1_c_one gauge\ncc_service1_c_one 2 100000\n", string(data))
 }
 
 func TestResultFormattingCleansKeys(t *testing.T) {
@@ -74,5 +74,5 @@ func TestResultFormattingCleansKeys(t *testing.T) {
 	unix := &(mockUnix{})
 	data, error := plugins.GeneratePrometheusPayload(api, unix)
 	assert.Nil(t, error)
-	assert.Equal(t, "# TYPE cc_service1_instances gauge\ncc_service1_instances 1 100\n# TYPE cc_service1_c_one gauge\ncc_service1_c_one 2 100\n", string(data))
+	assert.Equal(t, "# TYPE cc_service1_instances gauge\ncc_service1_instances 1 100000\n# TYPE cc_service1_c_one gauge\ncc_service1_c_one 2 100000\n", string(data))
 }

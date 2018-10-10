@@ -32,7 +32,7 @@ func cleanValue(value string) string {
 
 // GeneratePrometheusPayload - Collect and create Prometheus payload
 func GeneratePrometheusPayload(cc client.CCServerReadApi, unixTime UnixTime) ([]byte, error) {
-	epoch := unixTime.Unix()
+	epoch := unixTime.Unix() * 1000
 	var buffer bytes.Buffer
 	serviceList, err := cc.GetServiceList()
 	if err != nil {
