@@ -12,7 +12,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/slvwolf/ccentral/client"
-	"github.com/slvwolf/ccentral/plugins"
+	"github.com/slvwolf/ccentral/plugins/prometheus"
+	"github.com/slvwolf/ccentral/plugins/zabbix"
 )
 
 var cc client.CCApi
@@ -141,7 +142,7 @@ func handleService(w http.ResponseWriter, r *http.Request) {
 func handlePrometheus(w http.ResponseWriter, r *http.Request) {
 	enabled, _ := ccService.GetConfigBool("prometheus_enabled")
 	if enabled {
-		data, err := plugins.GeneratePrometheusPayload(cc, time.Now())
+		data, err := prometheus.GeneratePrometheusPayload(cc, time.Now())
 		if err != nil {
 			writeInternalError(w, "Failed to generate payload", 500)
 			return
@@ -198,7 +199,7 @@ _________ _________                __                .__
 		router.HandleFunc("/api/1/services/{serviceId}", handleService)
 		router.HandleFunc("/api/1/services/{serviceId}/keys/{keyId}", handleItem)
 		router.HandleFunc("/plugins/prometheus/data", handlePrometheus)
-		plugins.StartZabbixUpdater(ccService, cc)
+		zabbix.StartZabbixUpdater(ccService, cc)
 	} else {
 		// TODO: User mocked CCApi instead
 		log.Printf("Running in PRESENTATION mode")

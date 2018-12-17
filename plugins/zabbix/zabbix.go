@@ -1,4 +1,4 @@
-package plugins
+package zabbix
 
 import (
 	"encoding/binary"
@@ -7,12 +7,11 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
-	"reflect"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/slvwolf/ccentral/client"
+	"github.com/slvwolf/ccentral/plugins"
 )
 
 type metric struct {
@@ -136,33 +135,6 @@ func sendZabbix(service *client.CCentralService, metrics []*metric) {
 	}
 }
 
-func collectInstanceCounters(data map[string]interface{}, counters map[string]int) map[string]int {
-	for key, value := range data {
-		if strings.HasPrefix(key, "c_") {
-			cList, found := value.([]interface{})
-			if !found {
-				log.Printf("Problem collecting counters, expected a list but got: %T", value)
-				continue
-			}
-			if len(cList) < 1 {
-				continue
-			}
-			v := cList[len(cList)-1]
-			iValue, found := v.(float64)
-			if !found {
-				log.Printf("Problem collecting counters, list contained unsupported type: " + reflect.TypeOf(v).Name())
-				continue
-			}
-			if val, ok := counters[key]; ok {
-				counters[key] = val + int(iValue)
-			} else {
-				counters[key] = int(iValue)
-			}
-		}
-	}
-	return counters
-}
-
 func pollLoop(service *client.CCentralService, cc client.CCServerReadApi) {
 	for {
 		enabled, _ := service.GetConfigBool("zabbix_enabled")
@@ -184,7 +156,7 @@ func pollLoop(service *client.CCentralService, cc client.CCServerReadApi) {
 					log.Printf("Zabbix: %v", metric)
 					for _, instance := range instances {
 						log.Printf("Collecting counters for %v", serviceID)
-						counters = collectInstanceCounters(instance, counters)
+						counters = plugins.CollectInstanceCounters(instance, counters)
 					}
 					for key, value := range counters {
 						zabbixKey := fmt.Sprintf("%s.%s", serviceID, key)
