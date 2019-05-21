@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/slvwolf/ccentral/client"
 	"github.com/slvwolf/ccentral/plugins"
@@ -61,9 +62,24 @@ func GeneratePrometheusPayload(cc client.CCServerReadApi, unixTime plugins.UnixT
 			log.Printf("Total %d counters and %d histograms for %v", len(counters), len(histograms), serviceID)
 		}
 		for key, value := range counters {
-			cleanKey := plugins.CleanValue(key)
-			buffer.WriteString(fmt.Sprintf("# TYPE cc_%s_%s gauge\n", cleanServiceID, cleanKey))
-			buffer.WriteString(fmt.Sprintf("cc_%s_%s %d %d\n", cleanServiceID, cleanKey, value, epoch))
+			parts := strings.Split(key, ".")
+			if len(parts) == 1 {
+				cleanKey := plugins.CleanValue(key)
+				buffer.WriteString(fmt.Sprintf("# TYPE cc_%s_%s gauge\n", cleanServiceID, cleanKey))
+				buffer.WriteString(fmt.Sprintf("cc_%s_%s %d %d\n", cleanServiceID, cleanKey, value, epoch))
+			} else {
+				cleanKey := plugins.CleanValue(parts[0])
+				buffer.WriteString(fmt.Sprintf("# TYPE cc_%s_%s gauge\n", cleanServiceID, cleanKey))
+				buffer.WriteString(fmt.Sprintf("cc_%s_%s{", cleanServiceID, cleanKey))
+				for i := 1; i < len(parts); i++ {
+					if i > 1 {
+						buffer.WriteString(fmt.Sprintf(","))
+					}
+					labelValue := plugins.CleanValue(parts[i])
+					buffer.WriteString(fmt.Sprintf("part%d=%s", i, labelValue))
+				}
+				buffer.WriteString(fmt.Sprintf("} %d %d\n", value, epoch))
+			}
 		}
 		for _, value := range histograms {
 			buffer.Write(toMetricText(value, cleanServiceID, epoch))
