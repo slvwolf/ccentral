@@ -76,7 +76,7 @@ func TestResultGroupFormatting(t *testing.T) {
 	unix := &mockUnix{}
 	data, err := GeneratePrometheusPayload(api, unix)
 	assert.NoError(t, err)
-	assert.Equal(t, "# TYPE cc_service1_instances gauge\ncc_service1_instances 1 100000\n# TYPE cc_service1_c_one gauge\ncc_service1_c_one{part1=foobar} 2 100000\n", string(data))
+	assert.Equal(t, "# TYPE cc_service1_instances gauge\ncc_service1_instances 1 100000\n# TYPE cc_service1_c_one gauge\ncc_service1_c_one{part1=\"foobar\"} 2 100000\n", string(data))
 }
 
 func TestResultGroupFormattingMultiPart(t *testing.T) {
@@ -84,7 +84,7 @@ func TestResultGroupFormattingMultiPart(t *testing.T) {
 	unix := &mockUnix{}
 	data, err := GeneratePrometheusPayload(api, unix)
 	assert.NoError(t, err)
-	assert.Equal(t, "# TYPE cc_service1_instances gauge\ncc_service1_instances 1 100000\n# TYPE cc_service1_c_one gauge\ncc_service1_c_one{part1=foo,part2=bar} 2 100000\n", string(data))
+	assert.Equal(t, "# TYPE cc_service1_instances gauge\ncc_service1_instances 1 100000\n# TYPE cc_service1_c_one gauge\ncc_service1_c_one{part1=\"foo\",part2=\"bar\"} 2 100000\n", string(data))
 }
 
 func TestResultFormattingCleansServiceName(t *testing.T) {

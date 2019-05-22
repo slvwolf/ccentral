@@ -76,7 +76,7 @@ func GeneratePrometheusPayload(cc client.CCServerReadApi, unixTime plugins.UnixT
 						buffer.WriteString(fmt.Sprintf(","))
 					}
 					labelValue := plugins.CleanValue(parts[i])
-					buffer.WriteString(fmt.Sprintf("part%d=%s", i, labelValue))
+					buffer.WriteString(fmt.Sprintf("part%d=\"%s\"", i, labelValue))
 				}
 				buffer.WriteString(fmt.Sprintf("} %d %d\n", value, epoch))
 			}
