@@ -71,6 +71,22 @@ func TestResultFormatting(t *testing.T) {
 	assert.Equal(t, "# TYPE cc_service1_instances gauge\ncc_service1_instances 1 100000\n# TYPE cc_service1_c_one gauge\ncc_service1_c_one 2 100000\n", string(data))
 }
 
+func TestResultGroupFormatting(t *testing.T) {
+	api := newMockApi("service1", "c_one.foobar", createCounterArray())
+	unix := &mockUnix{}
+	data, err := GeneratePrometheusPayload(api, unix)
+	assert.NoError(t, err)
+	assert.Equal(t, "# TYPE cc_service1_instances gauge\ncc_service1_instances 1 100000\n# TYPE cc_service1_c_one gauge\ncc_service1_c_one{part1=\"foobar\"} 2 100000\n", string(data))
+}
+
+func TestResultGroupFormattingMultiPart(t *testing.T) {
+	api := newMockApi("service1", "c_one.foo.bar", createCounterArray())
+	unix := &mockUnix{}
+	data, err := GeneratePrometheusPayload(api, unix)
+	assert.NoError(t, err)
+	assert.Equal(t, "# TYPE cc_service1_instances gauge\ncc_service1_instances 1 100000\n# TYPE cc_service1_c_one gauge\ncc_service1_c_one{part1=\"foo\",part2=\"bar\"} 2 100000\n", string(data))
+}
+
 func TestResultFormattingCleansServiceName(t *testing.T) {
 	api := newMockApi("service-1%#", "c_one", createCounterArray())
 	unix := &mockUnix{}
